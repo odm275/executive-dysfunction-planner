@@ -38,8 +38,8 @@ Before committing, run the feedback loops:
 
 - `bun run typecheck` to run the TypeScript type checker
 - `bun run lint` to run ESLint
-
-Note: No test framework is configured in this project yet. If tests exist, run `bun test`.
+- `bun test` to run unit/component tests
+- `bun run test:e2e` to run Playwright e2e tests (only if you changed UI or routing — requires a running dev server and is slow)
 
 # COMMIT
 
