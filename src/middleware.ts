@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "~/server/better-auth";
 
-const PUBLIC_PATHS = [
-  "/auth/sign-in",
-  "/api/auth",
-];
+const PUBLIC_PATHS = ["/auth/sign-in", "/api/auth"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
+  // Better Auth sets an HTTP-only session cookie named "better-auth.session_token".
+  // Checking its presence in middleware avoids importing the DB (which doesn't work
+  // in the Edge Runtime with file: URLs). The actual session is verified server-side
+  // in getSession() calls within pages and tRPC procedures.
+  const sessionCookie =
+    request.cookies.get("better-auth.session_token") ??
+    request.cookies.get("__Secure-better-auth.session_token");
 
-  if (!session) {
+  if (!sessionCookie) {
     const signInUrl = new URL("/auth/sign-in", request.url);
     return NextResponse.redirect(signInUrl);
   }
@@ -30,12 +32,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt
-     */
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };
