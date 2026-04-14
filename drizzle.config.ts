@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["executive-dysfunction-planner_*"],
+  tablesFilter: ["edp_*"],
 } satisfies Config;

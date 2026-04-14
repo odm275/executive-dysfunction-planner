@@ -12,7 +12,11 @@ const config = {
     "**/__tests__/**/*.[jt]s?(x)",
     "**/?(*.)+(spec|test).[jt]s?(x)",
   ],
-  testPathIgnorePatterns: ["<rootDir>/e2e/", "<rootDir>/node_modules/"],
+  testPathIgnorePatterns: [
+    "<rootDir>/e2e/",
+    "<rootDir>/node_modules/",
+    "<rootDir>/.sandcastle/",
+  ],
   moduleNameMapper: {
     "^~/(.*)$": "<rootDir>/src/$1",
   },

@@ -19,11 +19,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 RUN useradd -m -s /bin/bash agent
 USER agent
 
+# Install bun
+RUN curl -fsSL https://bun.sh/install | bash
+
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
-# Add Claude to PATH
-ENV PATH="/home/agent/.local/bin:$PATH"
+# Add Claude and bun to PATH
+ENV PATH="/home/agent/.local/bin:/home/agent/.bun/bin:$PATH"
 
 WORKDIR /home/agent
 
