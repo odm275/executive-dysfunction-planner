@@ -36,7 +36,8 @@
     "**/*.tsx",
     "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".sandcastle/**/*.ts"
   ],
   "exclude": ["node_modules", "generated", "e2e"]
 }

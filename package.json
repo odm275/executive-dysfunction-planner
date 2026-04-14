@@ -23,9 +23,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "sandcastle": "bunx tsx .sandcastle/main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-hero/sandcastle": "^0.4.5",
     "@auth/drizzle-adapter": "^1.7.2",
     "@libsql/client": "^0.14.0",
     "@t3-oss/env-nextjs": "^0.12.0",
