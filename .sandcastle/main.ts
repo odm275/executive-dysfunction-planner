@@ -1,21 +1,35 @@
-import { run, claudeCode } from "@ai-hero/sandcastle";
+import { run, pi } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 
 // Simple loop: an agent that picks open GitHub issues one by one and closes them.
-// Run this with: bunx tsx .sandcastle/main.ts
-// Or add to package.json scripts: "sandcastle": "bunx tsx .sandcastle/main.ts"
+// Run this with: npx tsx .sandcastle/main.ts
+// Or add to package.json scripts: "sandcastle": "npx tsx .sandcastle/main.ts"
 
 await run({
   // A name for this run, shown as a prefix in log output.
   name: "worker",
 
   // Sandbox provider — Docker is the default runtime.
-  sandbox: docker(),
+  // Mount only auth.json read-only to a staging path. pi needs a writable
+  // config dir for lock files, so we copy auth.json into a fresh writable dir
+  // via onSandboxReady and point PI_CODING_AGENT_DIR there.
+  sandbox: docker({
+    mounts: [
+      {
+        hostPath: "~/.pi/agent/auth.json",
+        sandboxPath: "/tmp/pi-auth.json",
+        readonly: true,
+      },
+    ],
+  }),
 
-  // The agent provider. Pass a model string to claudeCode() — sonnet balances
-  // capability and speed for most tasks. Switch to claude-opus-4-6 for harder
-  // problems, or claude-haiku-4-5-20251001 for speed.
-  agent: claudeCode("claude-sonnet-4-6"),
+  // The agent provider. Use the github-copilot/ prefix so pi routes through
+  // GitHub Copilot OAuth (from auth.json) instead of looking for an Anthropic
+  // API key. Note: GH Copilot uses dot notation — claude-sonnet-4.6, not 4-6.
+  // PI_CODING_AGENT_DIR points pi to the writable config dir we set up below.
+  agent: pi("github-copilot/claude-sonnet-4.6", {
+    env: { PI_CODING_AGENT_DIR: "/home/agent/.pi-agent" },
+  }),
 
   // Path to the prompt file. Shell expressions inside are evaluated inside the
   // sandbox at the start of each iteration, so the agent always sees fresh data.
@@ -33,8 +47,8 @@ await run({
   branchStrategy: { type: "merge-to-head" },
 
   // Copy node_modules from the host into the worktree before the sandbox
-  // starts. This avoids a full bun install from scratch on every iteration.
-  // The onSandboxReady hook still runs bun install as a safety net to handle
+  // starts. This avoids a full npm install from scratch on every iteration.
+  // The onSandboxReady hook still runs npm install as a safety net to handle
   // platform-specific binaries and any packages added since the last copy.
   copyToSandbox: ["node_modules"],
 
@@ -43,6 +57,11 @@ await run({
     // onSandboxReady runs once after the sandbox is initialised and the repo is
     // synced in, before the agent starts. Use it to install dependencies or run
     // any other setup steps your project needs.
-    onSandboxReady: [{ command: "bun install" }],
+    onSandboxReady: [
+      // Set up a writable pi config dir with the host's auth credentials so
+      // pi can authenticate with GitHub Copilot without an interactive /login.
+      { command: "mkdir -p /home/agent/.pi-agent && cp /tmp/pi-auth.json /home/agent/.pi-agent/auth.json" },
+      { command: "bun install" },
+    ],
   },
 });

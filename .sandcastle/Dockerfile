@@ -15,18 +15,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && apt-get update && apt-get install -y gh \
   && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user for Claude to run as
+# Create a non-root user
 RUN useradd -m -s /bin/bash agent
+
+# Install pi coding agent (run as root before USER agent)
+RUN npm install -g @mariozechner/pi-coding-agent
+RUN npm install -g bun
+
 USER agent
-
-# Install bun
-RUN curl -fsSL https://bun.sh/install | bash
-
-# Install Claude Code CLI
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-# Add Claude and bun to PATH
-ENV PATH="/home/agent/.local/bin:/home/agent/.bun/bin:$PATH"
 
 WORKDIR /home/agent
 
