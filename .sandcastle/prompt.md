@@ -39,16 +39,11 @@ Pick the highest-priority open issue that is not blocked by another open issue.
    - List files changed
    - Note any blockers for the next iteration
 6. **Close** — close the issue with `gh issue close <number> --comment "..."` explaining what was done.
+7. **Signal** — output `<promise>COMPLETE</promise>` to end this iteration. Do not pick another issue.
 
 ## Rules
 
 - Work on **one issue per iteration**. Do not attempt multiple issues in a single iteration.
 - Do not close an issue until you have committed the fix and verified tests pass.
 - Do not leave commented-out code or TODO comments in committed code.
-- If you are blocked (missing context, failing tests you cannot fix, external dependency), leave a comment on the issue and move on — do not close it.
-
-# Done
-
-When all actionable issues are complete (or you are blocked on all remaining ones), output the completion signal:
-
-<promise>COMPLETE</promise>
+- If you are blocked (missing context, failing tests you cannot fix, external dependency), leave a comment on the issue, then output `<promise>COMPLETE</promise>` to end the iteration.
