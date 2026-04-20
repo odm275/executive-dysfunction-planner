@@ -1,16 +1,13 @@
 import { test, expect } from "@playwright/test";
 
-test("homepage loads", async ({ page }) => {
+test("unauthenticated users are redirected to sign-in", async ({ page }) => {
   await page.goto("/");
-
-  await expect(page).toHaveTitle(/Create T3 App/);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/auth\/sign-in/);
 });
 
-test("sign in button is visible when logged out", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(
-    page.getByRole("button", { name: /sign in with github/i }),
-  ).toBeVisible();
+test("sign-in page is accessible and shows magic link form", async ({
+  page,
+}) => {
+  await page.goto("/auth/sign-in");
+  await expect(page.getByRole("button", { name: /send magic link/i })).toBeVisible();
 });

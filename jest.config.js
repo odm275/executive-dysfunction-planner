@@ -22,4 +22,16 @@ const config = {
   },
 };
 
-export default createJestConfig(config);
+// next/jest sets its own transformIgnorePatterns; we extend it to also
+// transform ESM-only packages that are imported from server code.
+async function jestConfig() {
+  const nextConfig = await createJestConfig(config)();
+  const existing = nextConfig.transformIgnorePatterns ?? [];
+  // Replace the catch-all node_modules ignore with one that allows superjson
+  nextConfig.transformIgnorePatterns = existing
+    .filter((p) => !p.includes("node_modules"))
+    .concat(["/node_modules/(?!(superjson|copy-anything|is-what)/)"]);
+  return nextConfig;
+}
+
+export default jestConfig;
