@@ -127,8 +127,16 @@ export const questRouter = createTRPCRouter({
     return ctx.db.query.quest.findMany({
       where: and(eq(quest.userId, userId), eq(quest.isArchived, false)),
       with: {
-        chapters: true,
-        objectives: true,
+        chapters: {
+          orderBy: (c, { asc }) => [asc(c.order)],
+        },
+        objectives: {
+          with: {
+            subTasks: { orderBy: (s, { asc }) => [asc(s.order)] },
+            counterTools: true,
+          },
+          orderBy: (o, { asc }) => [asc(o.order)],
+        },
       },
       orderBy: (q, { desc }) => [desc(q.createdAt)],
     });

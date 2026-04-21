@@ -4,7 +4,7 @@
  * without pulling in the tRPC / better-auth stack.
  */
 import { eq, and } from "drizzle-orm";
-import { type LibSQLDatabase } from "drizzle-orm/libsql";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 import * as schema from "~/server/db/schema";
 import { quest, chapter, objective, subTask } from "~/server/db/schema";
@@ -38,7 +38,7 @@ export async function getOwnedChapter(
     where: eq(chapter.id, chapterId),
     with: { quest: { columns: { id: true, userId: true } } },
   });
-  if (!ch || ch.quest.userId !== userId) return null;
+  if (ch?.quest.userId !== userId) return null;
   return ch;
 }
 
@@ -57,7 +57,7 @@ export async function getOwnedObjective(
       quest: { columns: { id: true, userId: true } },
     },
   });
-  if (!obj || obj.quest.userId !== userId) return null;
+  if (obj?.quest.userId !== userId) return null;
   return obj;
 }
 
@@ -287,7 +287,7 @@ export async function toggleSubTaskFn(
     },
   });
 
-  if (!st || st.objective.quest.userId !== userId) {
+  if (st?.objective.quest.userId !== userId) {
     throw new Error("Sub-task not found.");
   }
 
@@ -339,7 +339,7 @@ export async function deleteSubTaskFn(
     },
   });
 
-  if (!st || st.objective.quest.userId !== userId) {
+  if (st?.objective.quest.userId !== userId) {
     throw new Error("Sub-task not found.");
   }
 

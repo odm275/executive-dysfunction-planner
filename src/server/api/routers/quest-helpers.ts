@@ -3,7 +3,7 @@
  * pulling in the tRPC / better-auth stack.
  */
 import { eq } from "drizzle-orm";
-import { type LibSQLDatabase } from "drizzle-orm/libsql";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 import * as schema from "~/server/db/schema";
 import { quest, objective } from "~/server/db/schema";
