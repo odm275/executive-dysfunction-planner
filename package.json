@@ -18,7 +18,7 @@
     "lint:fix": "SKIP_ENV_VALIDATION=1 next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "test": "SKIP_ENV_VALIDATION=1 jest",
+    "test": "SKIP_ENV_VALIDATION=1 jest && playwright test",
     "test:watch": "SKIP_ENV_VALIDATION=1 jest --watch",
     "test:coverage": "SKIP_ENV_VALIDATION=1 jest --coverage",
     "test:e2e": "playwright test",
