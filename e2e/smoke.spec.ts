@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+// These smoke tests intentionally run without auth — clear the project-level storageState
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test("unauthenticated users are redirected to sign-in", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/auth\/sign-in/);

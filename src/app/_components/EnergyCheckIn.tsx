@@ -68,6 +68,7 @@ export function EnergyCheckIn({ onComplete }: EnergyCheckInProps) {
               key={option.value}
               onClick={() => handleSelect(option.value)}
               disabled={setEnergy.isPending}
+              aria-label={option.label}
               className={`flex items-center justify-between rounded-xl border px-6 py-4 text-left transition-all disabled:opacity-50 ${option.color} ${option.hoverColor}`}
             >
               <div>

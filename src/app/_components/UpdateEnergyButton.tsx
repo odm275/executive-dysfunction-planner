@@ -44,6 +44,7 @@ export function UpdateEnergyButton({ currentEnergy }: UpdateEnergyButtonProps) {
               key={level}
               onClick={() => setEnergy.mutate({ value: level })}
               disabled={setEnergy.isPending}
+              aria-label={ENERGY_LABELS[level]}
               className={`w-full px-4 py-3 text-left text-sm transition hover:bg-white/10 disabled:opacity-50 ${
                 level === currentEnergy
                   ? "font-semibold text-white"

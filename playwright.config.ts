@@ -16,9 +16,18 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   projects: [
+    // Auth setup — runs once before all test projects
+    {
+      name: "setup",
+      testMatch: /.*\.setup\.ts/,
+    },
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/user.json",
+      },
+      dependencies: ["setup"],
     },
   ],
   webServer: {

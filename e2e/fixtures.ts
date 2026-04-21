@@ -1,26 +1,15 @@
 import { test as base, type Page } from "@playwright/test";
 
-import { TEST_SESSION_TOKEN } from "./global-setup";
-
 /**
- * authedPage — a Playwright Page with the test user's session cookie pre-injected.
+ * authedPage — a Playwright Page that is already authenticated.
  *
- * This bypasses the magic-link flow entirely. The session token matches the row
- * seeded in global-setup, so better-auth will resolve it to TEST_USER_ID on every
- * request.
+ * Authentication is handled at the project level via storageState loaded from
+ * playwright/.auth/user.json (produced by e2e/auth.setup.ts). This fixture
+ * simply re-exposes `page` under the `authedPage` name so existing specs
+ * don't need import changes.
  */
 export const test = base.extend<{ authedPage: Page }>({
   authedPage: async ({ page }, use) => {
-    await page.context().addCookies([
-      {
-        name: "better-auth.session_token",
-        value: TEST_SESSION_TOKEN,
-        domain: "localhost",
-        path: "/",
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
     await use(page);
   },
 });
