@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "~/trpc/react";
 
 type SubTask = {
   id: number;
@@ -75,8 +76,77 @@ function objectiveProgress(obj: Objective): number {
 // ---------------------------------------------------------------------------
 // ObjectiveDetail
 // ---------------------------------------------------------------------------
-function ObjectiveDetail({ obj }: { obj: Objective }) {
+function ObjectiveDetail({ obj, onRefresh }: { obj: Objective; onRefresh: () => void }) {
   const progress = objectiveProgress(obj);
+  const utils = api.useUtils();
+
+  // Debuff toggle
+  const updateObjective = api.objective.updateObjective.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+    },
+  });
+
+  // Counter-tool mutations
+  const addCounterTool = api.debuff.addCounterTool.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+    },
+  });
+  const updateCounterTool = api.debuff.updateCounterTool.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+    },
+  });
+  const removeCounterTool = api.debuff.removeCounterTool.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+    },
+  });
+
+  // New counter-tool input state
+  const [newToolName, setNewToolName] = useState("");
+  const newToolInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit state: which counter-tool is being edited
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
+
+  function handleToggleDebuff() {
+    updateObjective.mutate({ id: obj.id, isDebuffed: !obj.isDebuffed });
+  }
+
+  function handleAddTool(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newToolName.trim();
+    if (!name) return;
+    addCounterTool.mutate(
+      { objectiveId: obj.id, name },
+      {
+        onSuccess: () => {
+          setNewToolName("");
+          newToolInputRef.current?.focus();
+        },
+      },
+    );
+  }
+
+  function handleEditSave(id: number) {
+    const name = editingName.trim();
+    if (!name) return;
+    updateCounterTool.mutate(
+      { id, name },
+      { onSuccess: () => setEditingId(null) },
+    );
+  }
 
   return (
     <div
@@ -112,6 +182,24 @@ function ObjectiveDetail({ obj }: { obj: Objective }) {
           </span>
         )}
       </div>
+
+      {/* Debuff toggle */}
+      {!obj.isCompleted && (
+        <div className="mb-3">
+          <button
+            data-testid={`debuff-toggle-${obj.id}`}
+            onClick={handleToggleDebuff}
+            disabled={updateObjective.isPending}
+            className={`rounded px-2 py-1 text-xs font-medium transition ${
+              obj.isDebuffed
+                ? "border border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                : "border border-white/20 bg-white/5 text-white/50 hover:bg-white/10"
+            }`}
+          >
+            {obj.isDebuffed ? "⚡ Emotionally Charged — Remove tag" : "Tag as Emotionally Charged"}
+          </button>
+        </div>
+      )}
 
       {/* Progress bar for PROGRESS_BAR mode */}
       {obj.trackingMode === "PROGRESS_BAR" && !obj.isCompleted && (
@@ -155,20 +243,106 @@ function ObjectiveDetail({ obj }: { obj: Objective }) {
         </ul>
       )}
 
-      {/* Counter-tools for debuffed objectives */}
-      {obj.isDebuffed && obj.counterTools.length > 0 && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-          <p className="mb-1.5 text-xs font-semibold text-red-300">
-            Counter-tools
-          </p>
-          <ul className="space-y-1">
-            {obj.counterTools.map((ct) => (
-              <li key={ct.id} className="flex items-center gap-2 text-sm text-white/70">
-                <span className="text-red-400">→</span>
-                {ct.name}
-              </li>
-            ))}
-          </ul>
+      {/* Counter-tools section (always visible when debuffed; management UI accessible) */}
+      {obj.isDebuffed && (
+        <div
+          data-testid={`counter-tools-section-${obj.id}`}
+          className="rounded-lg border border-red-500/20 bg-red-500/10 p-3"
+        >
+          <p className="mb-2 text-xs font-semibold text-red-300">Counter-tools</p>
+
+          {/* Existing counter-tools */}
+          {obj.counterTools.length > 0 && (
+            <ul className="mb-2 space-y-1.5">
+              {obj.counterTools.map((ct) => (
+                <li key={ct.id} className="flex items-center gap-2">
+                  {editingId === ct.id ? (
+                    <>
+                      <input
+                        data-testid={`counter-tool-edit-input-${ct.id}`}
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleEditSave(ct.id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        className="flex-1 rounded border border-white/20 bg-white/10 px-2 py-0.5 text-sm text-white/90 outline-none focus:border-white/40"
+                        autoFocus
+                      />
+                      <button
+                        data-testid={`counter-tool-save-${ct.id}`}
+                        onClick={() => handleEditSave(ct.id)}
+                        disabled={updateCounterTool.isPending}
+                        className="text-xs text-green-400 hover:text-green-300"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-xs text-white/30 hover:text-white/60"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-red-400">→</span>
+                      <span
+                        data-testid={`counter-tool-name-${ct.id}`}
+                        className="flex-1 text-sm text-white/70"
+                      >
+                        {ct.name}
+                      </span>
+                      <button
+                        data-testid={`counter-tool-edit-${ct.id}`}
+                        onClick={() => {
+                          setEditingId(ct.id);
+                          setEditingName(ct.name);
+                        }}
+                        className="text-xs text-white/30 hover:text-white/60"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        data-testid={`counter-tool-remove-${ct.id}`}
+                        onClick={() =>
+                          removeCounterTool.mutate({ id: ct.id })
+                        }
+                        disabled={removeCounterTool.isPending}
+                        className="text-xs text-red-400/60 hover:text-red-400"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Add new counter-tool */}
+          <form
+            onSubmit={handleAddTool}
+            className="flex gap-2"
+            data-testid={`counter-tool-add-form-${obj.id}`}
+          >
+            <input
+              ref={newToolInputRef}
+              data-testid={`counter-tool-new-input-${obj.id}`}
+              value={newToolName}
+              onChange={(e) => setNewToolName(e.target.value)}
+              placeholder="Add a counter-tool…"
+              className="flex-1 rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 placeholder-white/30 outline-none focus:border-red-500/40"
+            />
+            <button
+              type="submit"
+              data-testid={`counter-tool-add-btn-${obj.id}`}
+              disabled={addCounterTool.isPending || !newToolName.trim()}
+              className="rounded border border-red-500/40 bg-red-500/20 px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </form>
         </div>
       )}
     </div>
@@ -181,9 +355,11 @@ function ObjectiveDetail({ obj }: { obj: Objective }) {
 function ObjectiveRow({
   obj,
   autoExpand,
+  onRefresh,
 }: {
   obj: Objective;
   autoExpand?: boolean;
+  onRefresh: () => void;
 }) {
   const [expanded, setExpanded] = useState(autoExpand ?? false);
 
@@ -230,7 +406,7 @@ function ObjectiveRow({
       </button>
       {expanded && (
         <div className="mt-1 px-3 pb-2">
-          <ObjectiveDetail obj={obj} />
+          <ObjectiveDetail obj={obj} onRefresh={onRefresh} />
         </div>
       )}
     </li>
@@ -244,10 +420,12 @@ function ChapterSection({
   chapter,
   objectives,
   focusObjectiveId,
+  onRefresh,
 }: {
   chapter: Chapter;
   objectives: Objective[];
   focusObjectiveId?: number | null;
+  onRefresh: () => void;
 }) {
   const hasFocusedObjective =
     focusObjectiveId != null &&
@@ -277,6 +455,7 @@ function ChapterSection({
               key={obj.id}
               obj={obj}
               autoExpand={focusObjectiveId === obj.id}
+              onRefresh={onRefresh}
             />
           ))}
         </ul>
@@ -305,6 +484,13 @@ export function QuestCard({
   useEffect(() => {
     if (hasFocusedObjective) setExpanded(true);
   }, [hasFocusedObjective]);
+
+  const utils = api.useUtils();
+  const handleRefresh = () => {
+    void utils.quest.listActiveQuests.invalidate();
+    void utils.suggestion.getSuggestions.invalidate();
+  };
+
   const pct = progressPercent(quest.objectives);
 
   // Separate objectives by chapter membership
@@ -375,7 +561,13 @@ export function QuestCard({
               (o) => o.chapterId === ch.id,
             );
             return (
-              <ChapterSection key={ch.id} chapter={ch} objectives={chObjs} focusObjectiveId={focusObjectiveId} />
+              <ChapterSection
+                key={ch.id}
+                chapter={ch}
+                objectives={chObjs}
+                focusObjectiveId={focusObjectiveId}
+                onRefresh={handleRefresh}
+              />
             );
           })}
 
@@ -387,6 +579,7 @@ export function QuestCard({
                   key={obj.id}
                   obj={obj}
                   autoExpand={focusObjectiveId === obj.id}
+                  onRefresh={handleRefresh}
                 />
               ))}
             </ul>

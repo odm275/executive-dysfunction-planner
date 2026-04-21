@@ -7,7 +7,7 @@ import { eq, and } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 import * as schema from "~/server/db/schema";
-import { quest, chapter, objective, subTask } from "~/server/db/schema";
+import { quest, chapter, objective, subTask, counterTool } from "~/server/db/schema";
 import { autoArchiveQuestIfComplete } from "./quest-helpers";
 
 export type ChapterObjectiveDb = LibSQLDatabase<typeof schema>;
@@ -345,4 +345,89 @@ export async function deleteSubTaskFn(
 
   await db.delete(subTask).where(eq(subTask.id, subTaskId));
   return { id: subTaskId };
+}
+
+// ---------------------------------------------------------------------------
+// Counter-tool operations (Debuff Module — Issue #9)
+// ---------------------------------------------------------------------------
+
+export async function addCounterToolFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  input: { objectiveId: number; name: string },
+) {
+  const owned = await getOwnedObjective(db, input.objectiveId, userId);
+  if (!owned) throw new Error("Objective not found.");
+
+  const [created] = await db
+    .insert(counterTool)
+    .values({ objectiveId: input.objectiveId, name: input.name })
+    .returning();
+
+  return created!;
+}
+
+export async function updateCounterToolFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  input: { id: number; name: string },
+) {
+  // Verify ownership via the parent objective → quest chain
+  const ct = await db.query.counterTool.findFirst({
+    where: eq(counterTool.id, input.id),
+    with: {
+      objective: {
+        columns: { id: true },
+        with: { quest: { columns: { userId: true } } },
+      },
+    },
+  });
+
+  if (ct?.objective.quest.userId !== userId) {
+    throw new Error("Counter-tool not found.");
+  }
+
+  const [updated] = await db
+    .update(counterTool)
+    .set({ name: input.name })
+    .where(eq(counterTool.id, input.id))
+    .returning();
+
+  return updated!;
+}
+
+export async function removeCounterToolFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  counterToolId: number,
+) {
+  const ct = await db.query.counterTool.findFirst({
+    where: eq(counterTool.id, counterToolId),
+    with: {
+      objective: {
+        columns: { id: true },
+        with: { quest: { columns: { userId: true } } },
+      },
+    },
+  });
+
+  if (ct?.objective.quest.userId !== userId) {
+    throw new Error("Counter-tool not found.");
+  }
+
+  await db.delete(counterTool).where(eq(counterTool.id, counterToolId));
+  return { id: counterToolId };
+}
+
+export async function listCounterToolsFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  objectiveId: number,
+) {
+  const owned = await getOwnedObjective(db, objectiveId, userId);
+  if (!owned) throw new Error("Objective not found.");
+
+  return db.query.counterTool.findMany({
+    where: eq(counterTool.objectiveId, objectiveId),
+  });
 }
