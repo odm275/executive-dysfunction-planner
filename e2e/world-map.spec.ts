@@ -199,13 +199,14 @@ test.describe("World Map — progressive disclosure", () => {
 
     await authedPage.goto("/");
 
-    // Objective not yet visible
-    await expect(authedPage.getByText("Book theory test")).not.toBeVisible();
+    // The quest card itself is collapsed — objective not visible inside the card
+    const questCard = authedPage.getByTestId(`quest-card-${q.id}`);
+    await expect(questCard.getByText("Book theory test")).not.toBeVisible();
 
     // Click the quest region to expand
     await authedPage.getByTestId(`quest-region-${q.id}`).click();
 
-    await expect(authedPage.getByText("Book theory test")).toBeVisible();
+    await expect(questCard.getByText("Book theory test")).toBeVisible();
   });
 
   test("clicking objective row expands full detail", async ({ authedPage }) => {
@@ -242,9 +243,10 @@ test.describe("World Map — progressive disclosure", () => {
     await authedPage.getByTestId(`quest-region-${q.id}`).click();
     await authedPage.getByTestId(`objective-row-${o.id}`).click();
 
-    await expect(authedPage.getByText("Counter-tools")).toBeVisible();
-    await expect(authedPage.getByText("Do this with partner")).toBeVisible();
-    await expect(authedPage.getByText("15-min timer only")).toBeVisible();
+    const objectiveDetail = authedPage.getByTestId(`objective-detail-${o.id}`);
+    await expect(objectiveDetail.getByText("Counter-tools")).toBeVisible();
+    await expect(objectiveDetail.getByText("Do this with partner")).toBeVisible();
+    await expect(objectiveDetail.getByText("15-min timer only")).toBeVisible();
   });
 
   test("progress bar objective shows sub-tasks in detail", async ({
@@ -275,14 +277,15 @@ test.describe("World Map — progressive disclosure", () => {
     await authedPage.goto("/");
     await authedPage.getByTestId(`quest-region-${q.id}`).click();
 
-    // Chapter visible but objective hidden
+    // Chapter visible but objective hidden inside the quest card
+    const questCard = authedPage.getByTestId(`quest-card-${q.id}`);
     await expect(authedPage.getByText("Theory")).toBeVisible();
     await expect(
-      authedPage.getByText("Study highway code"),
+      questCard.getByText("Study highway code"),
     ).not.toBeVisible();
 
     // Expand chapter
     await authedPage.getByTestId(`chapter-toggle-${ch.id}`).click();
-    await expect(authedPage.getByText("Study highway code")).toBeVisible();
+    await expect(questCard.getByText("Study highway code")).toBeVisible();
   });
 });

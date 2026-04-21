@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { EnergyCheckIn } from "~/app/_components/EnergyCheckIn";
 import { QuestCard } from "~/app/_components/QuestCard";
+import { SuggestionOverlay } from "~/app/_components/SuggestionOverlay";
 import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
 import { api } from "~/trpc/react";
 
@@ -15,7 +16,28 @@ export function WorldMapClient() {
     api.energy.getTodayEnergy.useQuery();
   const { data: quests, isLoading: questsLoading } =
     api.quest.listActiveQuests.useQuery();
+  const { data: suggestionData, isLoading: suggestionsLoading } =
+    api.suggestion.getSuggestions.useQuery();
   const [justSet, setJustSet] = useState(false);
+
+  // Track which objective (if any) was tapped in the suggestion overlay so the
+  // matching quest card can auto-expand to it.
+  const [focusedObjectiveId, setFocusedObjectiveId] = useState<number | null>(
+    null,
+  );
+  const questRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const handleSuggestionSelect = useCallback(
+    (objectiveId: number, questId: number) => {
+      setFocusedObjectiveId(objectiveId);
+      // Scroll the matching quest card into view
+      const el = questRefs.current[questId];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [],
+  );
 
   // Only block render on energy loading — quests load inside the map
   if (energyLoading) {
@@ -34,6 +56,9 @@ export function WorldMapClient() {
   const energy = (todayEnergy?.value ?? "MEDIUM") as EnergyLevel;
   const activeQuests = quests ?? [];
   const slotsRemaining = MAX_ACTIVE_QUESTS - activeQuests.length;
+  const suggestions = suggestionData?.suggestions ?? [];
+  const resolvedEnergy: EnergyLevel =
+    (suggestionData?.energy ?? energy) as EnergyLevel;
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-b from-[#1a0533] to-[#0a0d1a] text-white">
@@ -64,18 +89,13 @@ export function WorldMapClient() {
           <span className="font-semibold text-white">{energy}</span>
         </p>
 
-        {/* Suggestion overlay placeholder */}
-        <div
-          data-testid="suggestion-overlay"
-          className="mb-6 rounded-xl border border-dashed border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/5 px-4 py-3"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(280,100%,70%)]/60">
-            Suggestions
-          </p>
-          <p className="mt-1 text-sm text-white/30">
-            Powered-up suggestions coming in the next slice.
-          </p>
-        </div>
+        {/* Suggestion overlay */}
+        <SuggestionOverlay
+          energy={resolvedEnergy}
+          suggestions={suggestions}
+          isLoading={suggestionsLoading}
+          onSelectObjective={handleSuggestionSelect}
+        />
 
         {/* Quest regions */}
         {questsLoading ? (
@@ -94,7 +114,17 @@ export function WorldMapClient() {
         ) : (
           <div className="space-y-4" data-testid="quest-list">
             {activeQuests.map((q) => (
-              <QuestCard key={q.id} quest={q} />
+              <div
+                key={q.id}
+                ref={(el) => {
+                  questRefs.current[q.id] = el;
+                }}
+              >
+                <QuestCard
+                  quest={q}
+                  focusObjectiveId={focusedObjectiveId}
+                />
+              </div>
             ))}
           </div>
         )}

@@ -3,6 +3,7 @@ import { energyRouter } from "~/server/api/routers/energy";
 import { objectiveRouter } from "~/server/api/routers/objective";
 import { postRouter } from "~/server/api/routers/post";
 import { questRouter } from "~/server/api/routers/quest";
+import { suggestionRouter } from "~/server/api/routers/suggestion";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   objective: objectiveRouter,
   post: postRouter,
   quest: questRouter,
+  suggestion: suggestionRouter,
 });
 
 // export type definition of API

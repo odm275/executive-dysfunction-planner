@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type SubTask = {
   id: number;
@@ -178,8 +178,19 @@ function ObjectiveDetail({ obj }: { obj: Objective }) {
 // ---------------------------------------------------------------------------
 // ObjectiveRow
 // ---------------------------------------------------------------------------
-function ObjectiveRow({ obj }: { obj: Objective }) {
-  const [expanded, setExpanded] = useState(false);
+function ObjectiveRow({
+  obj,
+  autoExpand,
+}: {
+  obj: Objective;
+  autoExpand?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(autoExpand ?? false);
+
+  // If the parent signals this objective should be focused after mount, expand it.
+  useEffect(() => {
+    if (autoExpand) setExpanded(true);
+  }, [autoExpand]);
 
   return (
     <li>
@@ -232,11 +243,20 @@ function ObjectiveRow({ obj }: { obj: Objective }) {
 function ChapterSection({
   chapter,
   objectives,
+  focusObjectiveId,
 }: {
   chapter: Chapter;
   objectives: Objective[];
+  focusObjectiveId?: number | null;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const hasFocusedObjective =
+    focusObjectiveId != null &&
+    objectives.some((o) => o.id === focusObjectiveId);
+  const [collapsed, setCollapsed] = useState(!hasFocusedObjective);
+
+  useEffect(() => {
+    if (hasFocusedObjective) setCollapsed(false);
+  }, [hasFocusedObjective]);
 
   return (
     <div className="mb-2">
@@ -253,7 +273,11 @@ function ChapterSection({
       {!collapsed && (
         <ul className="mt-1 space-y-1">
           {objectives.map((obj) => (
-            <ObjectiveRow key={obj.id} obj={obj} />
+            <ObjectiveRow
+              key={obj.id}
+              obj={obj}
+              autoExpand={focusObjectiveId === obj.id}
+            />
           ))}
         </ul>
       )}
@@ -264,8 +288,23 @@ function ChapterSection({
 // ---------------------------------------------------------------------------
 // QuestCard
 // ---------------------------------------------------------------------------
-export function QuestCard({ quest }: { quest: Quest }) {
-  const [expanded, setExpanded] = useState(false);
+export function QuestCard({
+  quest,
+  focusObjectiveId,
+}: {
+  quest: Quest;
+  focusObjectiveId?: number | null;
+}) {
+  // Auto-expand the card when one of its objectives is focused via suggestion
+  const hasFocusedObjective =
+    focusObjectiveId != null &&
+    quest.objectives.some((o) => o.id === focusObjectiveId);
+
+  const [expanded, setExpanded] = useState(hasFocusedObjective);
+
+  useEffect(() => {
+    if (hasFocusedObjective) setExpanded(true);
+  }, [hasFocusedObjective]);
   const pct = progressPercent(quest.objectives);
 
   // Separate objectives by chapter membership
@@ -336,7 +375,7 @@ export function QuestCard({ quest }: { quest: Quest }) {
               (o) => o.chapterId === ch.id,
             );
             return (
-              <ChapterSection key={ch.id} chapter={ch} objectives={chObjs} />
+              <ChapterSection key={ch.id} chapter={ch} objectives={chObjs} focusObjectiveId={focusObjectiveId} />
             );
           })}
 
@@ -344,7 +383,11 @@ export function QuestCard({ quest }: { quest: Quest }) {
           {topLevelObjectives.length > 0 && (
             <ul className="space-y-1">
               {topLevelObjectives.map((obj) => (
-                <ObjectiveRow key={obj.id} obj={obj} />
+                <ObjectiveRow
+                  key={obj.id}
+                  obj={obj}
+                  autoExpand={focusObjectiveId === obj.id}
+                />
               ))}
             </ul>
           )}
