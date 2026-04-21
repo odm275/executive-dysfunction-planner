@@ -1,5 +1,6 @@
 import { energyRouter } from "~/server/api/routers/energy";
 import { postRouter } from "~/server/api/routers/post";
+import { questRouter } from "~/server/api/routers/quest";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
   energy: energyRouter,
   post: postRouter,
+  quest: questRouter,
 });
 
 // export type definition of API
