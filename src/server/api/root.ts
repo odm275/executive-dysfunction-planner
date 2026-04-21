@@ -1,4 +1,6 @@
+import { chapterRouter } from "~/server/api/routers/chapter";
 import { energyRouter } from "~/server/api/routers/energy";
+import { objectiveRouter } from "~/server/api/routers/objective";
 import { postRouter } from "~/server/api/routers/post";
 import { questRouter } from "~/server/api/routers/quest";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -9,7 +11,9 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  chapter: chapterRouter,
   energy: energyRouter,
+  objective: objectiveRouter,
   post: postRouter,
   quest: questRouter,
 });
