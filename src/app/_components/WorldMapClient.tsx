@@ -6,6 +6,8 @@ import { QuestCard } from "~/app/_components/QuestCard";
 import { SuggestionOverlay } from "~/app/_components/SuggestionOverlay";
 import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
 import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
+import { RewardMenu } from "~/app/_components/RewardMenu";
+import { RewardChat } from "~/app/_components/RewardChat";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -22,6 +24,20 @@ export function WorldMapClient() {
   const [justSet, setJustSet] = useState(false);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showRewardMenu, setShowRewardMenu] = useState(false);
+  const [rewardChat, setRewardChat] = useState<{
+    objectiveName: string;
+    difficulty: "HARD" | "LEGENDARY";
+  } | null>(null);
+
+  const handleObjectiveCompleted = useCallback(
+    (objectiveName: string, difficulty: string) => {
+      if (difficulty === "HARD" || difficulty === "LEGENDARY") {
+        setRewardChat({ objectiveName, difficulty });
+      }
+    },
+    [],
+  );
 
   // Track which objective (if any) was tapped in the suggestion overlay so the
   // matching quest card can auto-expand to it.
@@ -71,7 +87,16 @@ export function WorldMapClient() {
           Executive Dysfunction{" "}
           <span className="text-[hsl(280,100%,70%)]">Planner</span>
         </h1>
-        <UpdateEnergyButton currentEnergy={energy} />
+        <div className="flex items-center gap-3">
+          <button
+            data-testid="whats-my-reward-btn"
+            onClick={() => setShowRewardMenu(true)}
+            className="rounded border border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/10 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/20"
+          >
+            🎁 Reward?
+          </button>
+          <UpdateEnergyButton currentEnergy={energy} />
+        </div>
       </header>
 
       {/* World Map content */}
@@ -147,12 +172,27 @@ export function WorldMapClient() {
                 <QuestCard
                   quest={q}
                   focusObjectiveId={focusedObjectiveId}
+                  onObjectiveCompleted={handleObjectiveCompleted}
                 />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Reward Menu modal */}
+      {showRewardMenu && (
+        <RewardMenu onClose={() => setShowRewardMenu(false)} />
+      )}
+
+      {/* AI Reward Chat modal */}
+      {rewardChat && (
+        <RewardChat
+          objectiveName={rewardChat.objectiveName}
+          difficulty={rewardChat.difficulty}
+          onClose={() => setRewardChat(null)}
+        />
+      )}
     </main>
   );
 }

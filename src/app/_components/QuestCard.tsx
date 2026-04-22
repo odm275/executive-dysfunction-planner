@@ -81,10 +81,12 @@ function ObjectiveDetail({
   obj,
   isSideQuest,
   onRefresh,
+  onCompleted,
 }: {
   obj: Objective;
   isSideQuest: boolean;
   onRefresh: () => void;
+  onCompleted?: (objectiveName: string, difficulty: string) => void;
 }) {
   const progress = objectiveProgress(obj);
   const utils = api.useUtils();
@@ -95,6 +97,16 @@ function ObjectiveDetail({
       void utils.quest.listActiveQuests.invalidate();
       void utils.suggestion.getSuggestions.invalidate();
       onRefresh();
+    },
+  });
+
+  // Complete objective
+  const completeObjective = api.objective.completeObjective.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+      onCompleted?.(obj.name, obj.difficulty);
     },
   });
 
@@ -206,6 +218,20 @@ function ObjectiveDetail({
             }`}
           >
             {obj.isDebuffed ? "⚡ Emotionally Charged — Remove tag" : "Tag as Emotionally Charged"}
+          </button>
+        </div>
+      )}
+
+      {/* Complete button */}
+      {!obj.isCompleted && (
+        <div className="mb-3">
+          <button
+            data-testid={`complete-objective-btn-${obj.id}`}
+            onClick={() => completeObjective.mutate({ id: obj.id })}
+            disabled={completeObjective.isPending}
+            className="rounded border border-green-500/40 bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-300 hover:bg-green-500/30 disabled:opacity-40"
+          >
+            {completeObjective.isPending ? "Completing…" : "✓ Mark Complete"}
           </button>
         </div>
       )}
@@ -366,11 +392,13 @@ function ObjectiveRow({
   isSideQuest,
   autoExpand,
   onRefresh,
+  onCompleted,
 }: {
   obj: Objective;
   isSideQuest: boolean;
   autoExpand?: boolean;
   onRefresh: () => void;
+  onCompleted?: (objectiveName: string, difficulty: string) => void;
 }) {
   const [expanded, setExpanded] = useState(autoExpand ?? false);
 
@@ -417,7 +445,7 @@ function ObjectiveRow({
       </button>
       {expanded && (
         <div className="mt-1 px-3 pb-2">
-          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} onRefresh={onRefresh} />
+          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} onRefresh={onRefresh} onCompleted={onCompleted} />
         </div>
       )}
     </li>
@@ -433,12 +461,14 @@ function ChapterSection({
   isSideQuest,
   focusObjectiveId,
   onRefresh,
+  onCompleted,
 }: {
   chapter: Chapter;
   objectives: Objective[];
   isSideQuest: boolean;
   focusObjectiveId?: number | null;
   onRefresh: () => void;
+  onCompleted?: (objectiveName: string, difficulty: string) => void;
 }) {
   const hasFocusedObjective =
     focusObjectiveId != null &&
@@ -470,6 +500,7 @@ function ChapterSection({
               isSideQuest={isSideQuest}
               autoExpand={focusObjectiveId === obj.id}
               onRefresh={onRefresh}
+              onCompleted={onCompleted}
             />
           ))}
         </ul>
@@ -484,9 +515,11 @@ function ChapterSection({
 export function QuestCard({
   quest,
   focusObjectiveId,
+  onObjectiveCompleted,
 }: {
   quest: Quest;
   focusObjectiveId?: number | null;
+  onObjectiveCompleted?: (objectiveName: string, difficulty: string) => void;
 }) {
   // Auto-expand the card when one of its objectives is focused via suggestion
   const hasFocusedObjective =
@@ -597,6 +630,7 @@ export function QuestCard({
                 isSideQuest={quest.isSideQuest}
                 focusObjectiveId={focusObjectiveId}
                 onRefresh={handleRefresh}
+                onCompleted={onObjectiveCompleted}
               />
             );
           })}
@@ -611,6 +645,7 @@ export function QuestCard({
                   isSideQuest={quest.isSideQuest}
                   autoExpand={focusObjectiveId === obj.id}
                   onRefresh={handleRefresh}
+                  onCompleted={onObjectiveCompleted}
                 />
               ))}
             </ul>
