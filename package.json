@@ -9,7 +9,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "bun src/server/db/seed.ts",
+    "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
@@ -24,10 +24,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "sandcastle": "bunx tsx .sandcastle/main.ts",
-    "sandcastle:build": "bunx sandcastle docker build-image",
+    "sandcastle": "tsx .sandcastle/main.ts",
+    "sandcastle:build": "sandcastle docker build-image",
     "sandcastle:clean": "docker ps -a --filter name=sandcastle --format '{{.Names}}' | xargs -r docker rm -f && echo 'Sandcastle containers cleaned.'",
-    "sandcastle:reset": "docker ps -a --filter name=sandcastle --format '{{.Names}}' | xargs -r docker rm -f && docker images sandcastle --format '{{.Repository}}:{{.Tag}}' | xargs -r docker rmi && echo 'Removed. Rebuilding image...' && bunx sandcastle docker build-image",
+    "sandcastle:reset": "docker ps -a --filter name=sandcastle --format '{{.Names}}' | xargs -r docker rm -f && docker images sandcastle --format '{{.Repository}}:{{.Tag}}' | xargs -r docker rmi && echo 'Removed. Rebuilding image...' && sandcastle docker build-image",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -70,10 +70,11 @@
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.15",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0"
+    "typescript-eslint": "^8.27.0",
+    "tsx": "^4.20.6"
   },
   "ct3aMetadata": {
     "initVersion": "7.40.0"
   },
-  "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
+  "packageManager": "npm@10.9.2"
 }

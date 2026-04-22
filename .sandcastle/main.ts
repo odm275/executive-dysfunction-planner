@@ -61,7 +61,7 @@ await run({
       // Set up a writable pi config dir with the host's auth credentials so
       // pi can authenticate with GitHub Copilot without an interactive /login.
       { command: "mkdir -p /home/agent/.pi-agent && cp /tmp/pi-auth.json /home/agent/.pi-agent/auth.json" },
-      { command: "bun install" },
+      { command: "npm install" },
     ],
   },
 });

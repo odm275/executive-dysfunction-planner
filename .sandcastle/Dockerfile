@@ -20,7 +20,6 @@ RUN useradd -m -s /bin/bash agent
 
 # Install pi coding agent (run as root before USER agent)
 RUN npm install -g @mariozechner/pi-coding-agent
-RUN npm install -g bun
 
 # Run as root so Chromium sandbox is automatically disabled — Playwright's recommendation
 # for trusted E2E tests in Docker. No --no-sandbox flag needed.

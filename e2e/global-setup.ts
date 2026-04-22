@@ -25,7 +25,7 @@ export default async function globalSetup() {
     unlinkSync(TEST_DB);
   }
 
-  execSync("bun run db:push", {
+  execSync("npm run db:push", {
     env: { ...process.env, ...testEnv },
     stdio: "pipe",
     input: Buffer.from("yes\n".repeat(5)), // answer yes to any drizzle-kit prompts

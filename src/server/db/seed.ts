@@ -1,6 +1,6 @@
 /**
  * Development seed script.
- * Run with: bun run db:seed
+ * Run with: npm run db:seed
  *
  * Seeds:
  * - reward table (COMFORT / ENTERTAINMENT / SOCIAL)
