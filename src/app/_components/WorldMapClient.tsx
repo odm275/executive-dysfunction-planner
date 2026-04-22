@@ -5,6 +5,7 @@ import { EnergyCheckIn } from "~/app/_components/EnergyCheckIn";
 import { QuestCard } from "~/app/_components/QuestCard";
 import { SuggestionOverlay } from "~/app/_components/SuggestionOverlay";
 import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
+import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -19,6 +20,8 @@ export function WorldMapClient() {
   const { data: suggestionData, isLoading: suggestionsLoading } =
     api.suggestion.getSuggestions.useQuery();
   const [justSet, setJustSet] = useState(false);
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Track which objective (if any) was tapped in the suggestion overlay so the
   // matching quest card can auto-expand to it.
@@ -73,14 +76,25 @@ export function WorldMapClient() {
 
       {/* World Map content */}
       <div className="flex-1 overflow-y-auto px-4 pb-8">
-        {/* Page title + slot counter */}
+        {/* Page title + slot counter + add quest button */}
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-2xl font-extrabold">Your World Map</h2>
-          <span className="text-sm text-white/40" data-testid="slots-remaining">
-            {slotsRemaining > 0
-              ? `${slotsRemaining} quest slot${slotsRemaining !== 1 ? "s" : ""} remaining`
-              : "Quest limit reached"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-white/40" data-testid="slots-remaining">
+              {slotsRemaining > 0
+                ? `${slotsRemaining} quest slot${slotsRemaining !== 1 ? "s" : ""} remaining`
+                : "Quest limit reached"}
+            </span>
+            {slotsRemaining > 0 && !showCreateForm && (
+              <button
+                data-testid="add-quest-btn"
+                onClick={() => setShowCreateForm(true)}
+                className="rounded bg-[hsl(280,100%,70%)]/20 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30"
+              >
+                + New Quest
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Energy badge */}
@@ -88,6 +102,16 @@ export function WorldMapClient() {
           Energy today:{" "}
           <span className="font-semibold text-white">{energy}</span>
         </p>
+
+        {/* Create quest form */}
+        {showCreateForm && (
+          <div className="mb-4">
+            <CreateQuestForm
+              onSuccess={() => setShowCreateForm(false)}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          </div>
+        )}
 
         {/* Suggestion overlay */}
         <SuggestionOverlay

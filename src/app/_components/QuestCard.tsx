@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
+import { EditQuestForm } from "~/app/_components/EditQuestForm";
 
 type SubTask = {
   id: number;
@@ -76,7 +77,15 @@ function objectiveProgress(obj: Objective): number {
 // ---------------------------------------------------------------------------
 // ObjectiveDetail
 // ---------------------------------------------------------------------------
-function ObjectiveDetail({ obj, onRefresh }: { obj: Objective; onRefresh: () => void }) {
+function ObjectiveDetail({
+  obj,
+  isSideQuest,
+  onRefresh,
+}: {
+  obj: Objective;
+  isSideQuest: boolean;
+  onRefresh: () => void;
+}) {
   const progress = objectiveProgress(obj);
   const utils = api.useUtils();
 
@@ -183,8 +192,8 @@ function ObjectiveDetail({ obj, onRefresh }: { obj: Objective; onRefresh: () => 
         )}
       </div>
 
-      {/* Debuff toggle */}
-      {!obj.isCompleted && (
+      {/* Debuff toggle — hidden for Side Quest objectives */}
+      {!obj.isCompleted && !isSideQuest && (
         <div className="mb-3">
           <button
             data-testid={`debuff-toggle-${obj.id}`}
@@ -243,8 +252,8 @@ function ObjectiveDetail({ obj, onRefresh }: { obj: Objective; onRefresh: () => 
         </ul>
       )}
 
-      {/* Counter-tools section (always visible when debuffed; management UI accessible) */}
-      {obj.isDebuffed && (
+      {/* Counter-tools section — hidden for Side Quest objectives */}
+      {obj.isDebuffed && !isSideQuest && (
         <div
           data-testid={`counter-tools-section-${obj.id}`}
           className="rounded-lg border border-red-500/20 bg-red-500/10 p-3"
@@ -354,10 +363,12 @@ function ObjectiveDetail({ obj, onRefresh }: { obj: Objective; onRefresh: () => 
 // ---------------------------------------------------------------------------
 function ObjectiveRow({
   obj,
+  isSideQuest,
   autoExpand,
   onRefresh,
 }: {
   obj: Objective;
+  isSideQuest: boolean;
   autoExpand?: boolean;
   onRefresh: () => void;
 }) {
@@ -406,7 +417,7 @@ function ObjectiveRow({
       </button>
       {expanded && (
         <div className="mt-1 px-3 pb-2">
-          <ObjectiveDetail obj={obj} onRefresh={onRefresh} />
+          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} onRefresh={onRefresh} />
         </div>
       )}
     </li>
@@ -419,11 +430,13 @@ function ObjectiveRow({
 function ChapterSection({
   chapter,
   objectives,
+  isSideQuest,
   focusObjectiveId,
   onRefresh,
 }: {
   chapter: Chapter;
   objectives: Objective[];
+  isSideQuest: boolean;
   focusObjectiveId?: number | null;
   onRefresh: () => void;
 }) {
@@ -454,6 +467,7 @@ function ChapterSection({
             <ObjectiveRow
               key={obj.id}
               obj={obj}
+              isSideQuest={isSideQuest}
               autoExpand={focusObjectiveId === obj.id}
               onRefresh={onRefresh}
             />
@@ -484,6 +498,8 @@ export function QuestCard({
   useEffect(() => {
     if (hasFocusedObjective) setExpanded(true);
   }, [hasFocusedObjective]);
+
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const utils = api.useUtils();
   const handleRefresh = () => {
@@ -536,6 +552,19 @@ export function QuestCard({
         </div>
       </button>
 
+      {/* Edit button — shown when expanded */}
+      {expanded && !showEditForm && (
+        <div className="px-4 pb-1">
+          <button
+            data-testid={`quest-edit-btn-${quest.id}`}
+            onClick={() => setShowEditForm(true)}
+            className="text-xs text-white/30 hover:text-white/60"
+          >
+            Edit quest
+          </button>
+        </div>
+      )}
+
       {/* Progress bar */}
       <div className="px-4 pb-3">
         <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
@@ -565,6 +594,7 @@ export function QuestCard({
                 key={ch.id}
                 chapter={ch}
                 objectives={chObjs}
+                isSideQuest={quest.isSideQuest}
                 focusObjectiveId={focusObjectiveId}
                 onRefresh={handleRefresh}
               />
@@ -578,6 +608,7 @@ export function QuestCard({
                 <ObjectiveRow
                   key={obj.id}
                   obj={obj}
+                  isSideQuest={quest.isSideQuest}
                   autoExpand={focusObjectiveId === obj.id}
                   onRefresh={handleRefresh}
                 />
@@ -591,6 +622,18 @@ export function QuestCard({
             </p>
           )}
         </div>
+      )}
+
+      {/* Edit quest form */}
+      {showEditForm && (
+        <EditQuestForm
+          questId={quest.id}
+          initialName={quest.name}
+          initialDescription={quest.description}
+          initialIsSideQuest={quest.isSideQuest}
+          onSuccess={() => setShowEditForm(false)}
+          onCancel={() => setShowEditForm(false)}
+        />
       )}
     </div>
   );

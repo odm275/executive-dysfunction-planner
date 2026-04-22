@@ -133,6 +133,18 @@ export function SuggestionOverlay({
           ))}
         </div>
       )}
+
+      {/* Release valve — always visible */}
+      <p
+        data-testid="world-map-release-valve"
+        className="mt-3 border-t border-white/10 pt-3 text-xs text-white/30"
+      >
+        Or,{" "}
+        <span className="text-cyan-400/70">
+          you could work on your World Map instead
+        </span>{" "}
+        — browse your Side Quests below.
+      </p>
     </div>
   );
 }

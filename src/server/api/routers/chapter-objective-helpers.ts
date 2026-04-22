@@ -154,8 +154,15 @@ export async function createObjectiveFn(
     order?: number;
   },
 ) {
-  const owned = await getOwnedQuest(db, input.questId, userId);
-  if (!owned) throw new Error("Quest not found.");
+  const ownedQuest = await db.query.quest.findFirst({
+    where: and(eq(quest.id, input.questId), eq(quest.userId, userId)),
+    columns: { id: true, isSideQuest: true },
+  });
+  if (!ownedQuest) throw new Error("Quest not found.");
+
+  if (ownedQuest.isSideQuest && input.isDebuffed) {
+    throw new Error("Side Quest objectives cannot be Emotionally Charged.");
+  }
 
   const [created] = await db
     .insert(objective)
@@ -188,6 +195,17 @@ export async function updateObjectiveFn(
 ) {
   const owned = await getOwnedObjective(db, input.id, userId);
   if (!owned) throw new Error("Objective not found.");
+
+  // Side Quest objectives may not be marked as Emotionally Charged
+  if (input.isDebuffed) {
+    const parentQuest = await db.query.quest.findFirst({
+      where: eq(quest.id, owned.questId),
+      columns: { isSideQuest: true },
+    });
+    if (parentQuest?.isSideQuest) {
+      throw new Error("Side Quest objectives cannot be Emotionally Charged.");
+    }
+  }
 
   const { id, ...fields } = input;
   const [updated] = await db
