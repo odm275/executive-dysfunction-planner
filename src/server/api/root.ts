@@ -8,6 +8,7 @@ import { questRouter } from "~/server/api/routers/quest";
 import { rewardRouter } from "~/server/api/routers/reward";
 import { suggestionRouter } from "~/server/api/routers/suggestion";
 import { userRouter } from "~/server/api/routers/user";
+import { reminderRouter } from "~/server/api/routers/reminder";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -24,6 +25,7 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   quest: questRouter,
   reward: rewardRouter,
+  reminder: reminderRouter,
   suggestion: suggestionRouter,
   user: userRouter,
 });

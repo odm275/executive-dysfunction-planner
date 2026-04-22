@@ -23,13 +23,14 @@ export const user = sqliteTable("user", (d) => ({
   updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
 }));
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
   account: many(account),
   session: many(session),
   quests: many(quest),
   energyStates: many(energyState),
   collaborators: many(collaborator),
   pushSubscriptions: many(pushSubscription),
+  reminderPreferences: one(reminderPreferences),
 }));
 
 export const account = sqliteTable(
@@ -365,6 +366,37 @@ export const pushSubscriptionRelations = relations(
   ({ one }) => ({
     user: one(user, {
       fields: [pushSubscription.userId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const reminderPreferences = sqliteTable(
+  "edp_reminder_preferences",
+  (d) => ({
+    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+    userId: d
+      .text({ length: 255 })
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    enabled: d.integer({ mode: "boolean" }).default(true).notNull(),
+    // Minimum days between reminders per quest
+    frequencyDays: d.integer({ mode: "number" }).default(3).notNull(),
+    createdAt: d
+      .integer({ mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+  }),
+  (t) => [index("reminder_preferences_user_id_idx").on(t.userId)],
+);
+
+export const reminderPreferencesRelations = relations(
+  reminderPreferences,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [reminderPreferences.userId],
       references: [user.id],
     }),
   }),

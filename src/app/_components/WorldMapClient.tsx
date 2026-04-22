@@ -10,6 +10,7 @@ import { RewardMenu } from "~/app/_components/RewardMenu";
 import { RewardChat } from "~/app/_components/RewardChat";
 import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
 import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
+import { ReminderPreferences } from "~/app/_components/ReminderPreferences";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -36,6 +37,7 @@ export function WorldMapClient() {
     objectiveName: string;
     difficulty: "HARD" | "LEGENDARY";
   } | null>(null);
+  const [showReminderPrefs, setShowReminderPrefs] = useState(false);
 
   const handleObjectiveCompleted = useCallback(
     (objectiveName: string, difficulty: string) => {
@@ -115,6 +117,13 @@ export function WorldMapClient() {
             className="rounded border border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/10 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/20"
           >
             🎁 Reward?
+          </button>
+          <button
+            data-testid="reminder-prefs-btn"
+            onClick={() => setShowReminderPrefs(true)}
+            className="rounded border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50 hover:bg-white/10"
+          >
+            🔔
           </button>
           <UpdateEnergyButton currentEnergy={energy} />
         </div>
@@ -213,6 +222,11 @@ export function WorldMapClient() {
           difficulty={rewardChat.difficulty}
           onClose={() => setRewardChat(null)}
         />
+      )}
+
+      {/* Reminder Preferences modal */}
+      {showReminderPrefs && (
+        <ReminderPreferences onClose={() => setShowReminderPrefs(false)} />
       )}
     </main>
   );

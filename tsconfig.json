@@ -39,5 +39,5 @@
     ".next/types/**/*.ts",
     ".sandcastle/**/*.ts"
   ],
-  "exclude": ["node_modules", "generated", "e2e", ".sandcastle/worktrees"]
+  "exclude": ["node_modules", "generated", "e2e", ".sandcastle/worktrees", "public"]
 }
