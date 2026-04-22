@@ -9,6 +9,7 @@ import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { RewardMenu } from "~/app/_components/RewardMenu";
 import { RewardChat } from "~/app/_components/RewardChat";
 import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
+import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -24,6 +25,8 @@ export function WorldMapClient() {
     api.suggestion.getSuggestions.useQuery();
   const { data: hasAnyQuests, isLoading: hasAnyQuestsLoading } =
     api.quest.hasAnyQuests.useQuery();
+  const { data: profile, isLoading: profileLoading } =
+    api.user.getProfile.useQuery();
   const [justSet, setJustSet] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
@@ -63,12 +66,17 @@ export function WorldMapClient() {
   );
 
   // Only block render on energy loading — quests load inside the map
-  if (energyLoading || hasAnyQuestsLoading) {
+  if (energyLoading || hasAnyQuestsLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#1a0533] to-[#0a0d1a]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
       </div>
     );
+  }
+
+  // Party Members see a limited dashboard
+  if (profile?.accountTier === "PARTY_MEMBER") {
+    return <PartyMemberDashboard />;
   }
 
   // First-time user: show onboarding conversation

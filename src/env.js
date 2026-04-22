@@ -15,6 +15,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     DATABASE_AUTH_TOKEN: z.string().optional(),
     ANTHROPIC_API_KEY: z.string().optional(),
+    INVITE_JWT_SECRET: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -39,6 +40,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     DATABASE_AUTH_TOKEN: process.env.DATABASE_AUTH_TOKEN,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    INVITE_JWT_SECRET: process.env.INVITE_JWT_SECRET,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

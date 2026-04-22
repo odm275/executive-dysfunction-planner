@@ -91,6 +91,21 @@ function ObjectiveDetail({
   const progress = objectiveProgress(obj);
   const utils = api.useUtils();
 
+  // Invite link generation
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const generateInvite = api.collaboration.generateInviteLink.useMutation({
+    onSuccess: ({ token }) => {
+      const url = `${window.location.origin}/invite?token=${token}`;
+      setInviteLink(url);
+    },
+  });
+
+  // Collaborators query (only for recruitable objectives)
+  const { data: collaborators } = api.collaboration.listCollaborators.useQuery(
+    { objectiveId: obj.id },
+    { enabled: obj.isRecruitable },
+  );
+
   // Debuff toggle
   const updateObjective = api.objective.updateObjective.useMutation({
     onSuccess: () => {
@@ -378,6 +393,72 @@ function ObjectiveDetail({
               Add
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Recruitable: invite link + collaborators */}
+      {obj.isRecruitable && (
+        <div
+          data-testid={`collaborators-section-${obj.id}`}
+          className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3"
+        >
+          <p className="mb-2 text-xs font-semibold text-cyan-300">Collaborators</p>
+
+          {/* Collaborator list */}
+          {collaborators && collaborators.length > 0 && (
+            <ul className="mb-2 space-y-1">
+              {collaborators.map((c) => (
+                <li
+                  key={c.id}
+                  data-testid={`collaborator-item-${c.id}`}
+                  className="flex items-center gap-2 text-xs text-white/60"
+                >
+                  <span className="text-cyan-400">•</span>
+                  <span>{(c as { user?: { name?: string | null; email: string } }).user?.name ?? (c as { user?: { email: string } }).user?.email ?? "Party Member"}</span>
+                  {c.contribution && (
+                    <span className="text-white/30">— {c.contribution}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Invite link generator */}
+          {!inviteLink ? (
+            <button
+              data-testid={`generate-invite-btn-${obj.id}`}
+              onClick={() => generateInvite.mutate({ objectiveId: obj.id })}
+              disabled={generateInvite.isPending}
+              className="text-xs text-cyan-400/70 hover:text-cyan-400"
+            >
+              {generateInvite.isPending ? "Generating…" : "🔗 Generate invite link"}
+            </button>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs text-white/40">Share this link:</p>
+              <div className="flex items-center gap-2">
+                <input
+                  data-testid={`invite-link-input-${obj.id}`}
+                  value={inviteLink}
+                  readOnly
+                  className="flex-1 truncate rounded border border-white/20 bg-white/5 px-2 py-1 text-xs text-white/60"
+                />
+                <button
+                  data-testid={`copy-invite-btn-${obj.id}`}
+                  onClick={() => void navigator.clipboard.writeText(inviteLink)}
+                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                >
+                  Copy
+                </button>
+              </div>
+              <button
+                onClick={() => setInviteLink(null)}
+                className="text-xs text-white/20 hover:text-white/40"
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

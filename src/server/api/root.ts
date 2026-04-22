@@ -1,4 +1,5 @@
 import { chapterRouter } from "~/server/api/routers/chapter";
+import { collaborationRouter } from "~/server/api/routers/collaboration";
 import { debuffRouter } from "~/server/api/routers/debuff";
 import { energyRouter } from "~/server/api/routers/energy";
 import { objectiveRouter } from "~/server/api/routers/objective";
@@ -6,6 +7,7 @@ import { postRouter } from "~/server/api/routers/post";
 import { questRouter } from "~/server/api/routers/quest";
 import { rewardRouter } from "~/server/api/routers/reward";
 import { suggestionRouter } from "~/server/api/routers/suggestion";
+import { userRouter } from "~/server/api/routers/user";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -15,6 +17,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   chapter: chapterRouter,
+  collaboration: collaborationRouter,
   debuff: debuffRouter,
   energy: energyRouter,
   objective: objectiveRouter,
@@ -22,6 +25,7 @@ export const appRouter = createTRPCRouter({
   quest: questRouter,
   reward: rewardRouter,
   suggestion: suggestionRouter,
+  user: userRouter,
 });
 
 // export type definition of API
