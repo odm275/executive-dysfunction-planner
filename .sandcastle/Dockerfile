@@ -21,13 +21,22 @@ RUN useradd -m -s /bin/bash agent
 # Install pi coding agent (run as root before USER agent)
 RUN npm install -g @mariozechner/pi-coding-agent
 
+# Keep Playwright browsers in a shared location so Sandcastle's runtime UID
+# can execute them even though the image is built as root.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 # Run as root so Chromium sandbox is automatically disabled — Playwright's recommendation
 # for trusted E2E tests in Docker. No --no-sandbox flag needed.
-RUN npx -y playwright@1.59.1 install --with-deps
+RUN npx -y playwright@1.59.1 install --with-deps chromium
+
+# Sandcastle runs the container as the host UID:GID, not as the image's root
+# user, so make the home and browser cache writable/executable for that UID.
+RUN mkdir -p /home/agent /ms-playwright \
+  && chmod -R 0777 /home/agent /ms-playwright
 
 WORKDIR /home/agent
 
 # In worktree sandbox mode, Sandcastle bind-mounts the git worktree at /home/agent/workspace
-# and overrides the working directory to /home/agent/workspace at container start.
-# Structure your Dockerfile so that /home/agent/workspace can serve as the project root.
-ENTRYPOINT ["sleep", "infinity"]
+# and starts the container with its own command (sleep infinity). Keep this as CMD
+# so the provider can override it cleanly without duplicating arguments.
+CMD ["sleep", "infinity"]

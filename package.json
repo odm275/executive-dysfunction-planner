@@ -25,9 +25,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "sandcastle": "tsx .sandcastle/main.ts",
-    "sandcastle:build": "sandcastle docker build-image",
-    "sandcastle:clean": "docker ps -a --filter name=sandcastle --format '{{.Names}}' | xargs -r docker rm -f && echo 'Sandcastle containers cleaned.'",
-    "sandcastle:reset": "docker ps -a --filter name=sandcastle --format '{{.Names}}' | xargs -r docker rm -f && docker images sandcastle --format '{{.Repository}}:{{.Tag}}' | xargs -r docker rmi && echo 'Removed. Rebuilding image...' && sandcastle docker build-image",
+    "sandcastle:build": "podman build -t sandcastle:executive-dysfunction-planner -f .sandcastle/Dockerfile .",
+    "sandcastle:clean": "sh -c 'names=$(podman ps -a --filter name=sandcastle --format \"{{.Names}}\"); if [ -n \"$names\" ]; then echo \"$names\" | xargs podman rm -f; fi; echo \"Sandcastle containers cleaned.\"'",
+    "sandcastle:reset": "sh -c 'names=$(podman ps -a --filter name=sandcastle --format \"{{.Names}}\"); if [ -n \"$names\" ]; then echo \"$names\" | xargs podman rm -f; fi; images=$(podman images sandcastle --format \"{{.Repository}}:{{.Tag}}\"); if [ -n \"$images\" ]; then echo \"$images\" | xargs podman rmi; fi; echo \"Removed. Rebuilding image...\"; podman build -t sandcastle:executive-dysfunction-planner -f .sandcastle/Dockerfile .'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

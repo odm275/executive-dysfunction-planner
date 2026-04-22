@@ -1,5 +1,5 @@
 import { run, pi } from "@ai-hero/sandcastle";
-import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
+import { podman } from "@ai-hero/sandcastle/sandboxes/podman";
 
 // Simple loop: an agent that picks open GitHub issues one by one and closes them.
 // Run this with: npx tsx .sandcastle/main.ts
@@ -9,16 +9,19 @@ await run({
   // A name for this run, shown as a prefix in log output.
   name: "worker",
 
-  // Sandbox provider — Docker is the default runtime.
+  // Sandbox provider — Podman runtime.
   // Mount only auth.json read-only to a staging path. pi needs a writable
   // config dir for lock files, so we copy auth.json into a fresh writable dir
   // via onSandboxReady and point PI_CODING_AGENT_DIR there.
-  sandbox: docker({
+  sandbox: podman({
     mounts: [
       {
         hostPath: "~/.pi/agent/auth.json",
         sandboxPath: "/tmp/pi-auth.json",
-        readonly: true,
+        // Podman expects combined volume options like ro,z. The current
+        // Sandcastle podman provider emits ro:z for readonly mounts, which
+        // fails parsing, so keep this mount writable and copy into a writable
+        // agent dir during onSandboxReady.
       },
     ],
   }),
