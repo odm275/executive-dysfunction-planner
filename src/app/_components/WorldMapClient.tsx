@@ -8,6 +8,7 @@ import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
 import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { RewardMenu } from "~/app/_components/RewardMenu";
 import { RewardChat } from "~/app/_components/RewardChat";
+import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -21,7 +22,10 @@ export function WorldMapClient() {
     api.quest.listActiveQuests.useQuery();
   const { data: suggestionData, isLoading: suggestionsLoading } =
     api.suggestion.getSuggestions.useQuery();
+  const { data: hasAnyQuests, isLoading: hasAnyQuestsLoading } =
+    api.quest.hasAnyQuests.useQuery();
   const [justSet, setJustSet] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showRewardMenu, setShowRewardMenu] = useState(false);
@@ -59,11 +63,20 @@ export function WorldMapClient() {
   );
 
   // Only block render on energy loading — quests load inside the map
-  if (energyLoading) {
+  if (energyLoading || hasAnyQuestsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#1a0533] to-[#0a0d1a]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
       </div>
+    );
+  }
+
+  // First-time user: show onboarding conversation
+  if (!hasAnyQuests && !onboardingComplete) {
+    return (
+      <OnboardingConversation
+        onComplete={() => setOnboardingComplete(true)}
+      />
     );
   }
 

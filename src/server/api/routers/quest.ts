@@ -119,6 +119,20 @@ export const questRouter = createTRPCRouter({
     }),
 
   /**
+   * Returns true if the user has any quests (active or archived).
+   * Used to detect first-time users for the onboarding flow.
+   */
+  hasAnyQuests: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const result = await ctx.db
+      .select({ id: quest.id })
+      .from(quest)
+      .where(eq(quest.userId, userId))
+      .limit(1);
+    return result.length > 0;
+  }),
+
+  /**
    * List all non-archived quests for the current user (with chapters and objectives).
    */
   listActiveQuests: protectedProcedure.query(async ({ ctx }) => {
