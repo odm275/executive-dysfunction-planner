@@ -145,6 +145,7 @@ export const questRouter = createTRPCRouter({
           orderBy: (c, { asc }) => [asc(c.order)],
         },
         objectives: {
+          where: (o, { eq }) => eq(o.isArchived, false),
           with: {
             subTasks: { orderBy: (s, { asc }) => [asc(s.order)] },
             counterTools: true,
@@ -183,6 +184,7 @@ export const questRouter = createTRPCRouter({
             orderBy: (c, { asc }) => [asc(c.order)],
           },
           objectives: {
+            where: (o, { eq }) => eq(o.isArchived, false),
             with: {
               subTasks: { orderBy: (s, { asc }) => [asc(s.order)] },
               counterTools: true,

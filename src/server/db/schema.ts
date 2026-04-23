@@ -192,6 +192,7 @@ export const objective = sqliteTable(
     isDebuffed: d.integer({ mode: "boolean" }).default(false).notNull(),
     isRecruitable: d.integer({ mode: "boolean" }).default(false).notNull(),
     isCompleted: d.integer({ mode: "boolean" }).default(false).notNull(),
+    isArchived: d.integer({ mode: "boolean" }).default(false).notNull(),
     order: d.integer({ mode: "number" }).default(0).notNull(),
     createdAt: d
       .integer({ mode: "timestamp" })

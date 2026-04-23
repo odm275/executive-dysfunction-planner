@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { objective } from "~/server/db/schema";
 import {
   createObjectiveFn,
   updateObjectiveFn,
@@ -10,6 +12,8 @@ import {
   createSubTaskFn,
   toggleSubTaskFn,
   deleteSubTaskFn,
+  archiveObjectiveFn,
+  restoreObjectiveFn,
 } from "./chapter-objective-helpers";
 
 const DifficultyEnum = z.enum(["EASY", "MEDIUM", "HARD", "LEGENDARY"]);
@@ -146,5 +150,56 @@ export const objectiveRouter = createTRPCRouter({
           message: (err as Error).message,
         });
       }
+    }),
+
+  /** Soft-archive an objective (sets isArchived = true). */
+  archiveObjective: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await archiveObjectiveFn(ctx.db, ctx.session.user.id, input.id);
+      } catch (err) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: (err as Error).message,
+        });
+      }
+    }),
+
+  /** Restore a previously archived objective (clears isArchived). */
+  restoreObjective: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await restoreObjectiveFn(ctx.db, ctx.session.user.id, input.id);
+      } catch (err) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: (err as Error).message,
+        });
+      }
+    }),
+
+  /** List archived objectives for a given quest. */
+  listArchivedObjectives: protectedProcedure
+    .input(z.object({ questId: z.number().int() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      // Verify ownership of the quest first
+      const owned = await ctx.db.query.quest.findFirst({
+        where: (q, { and: a, eq: e }) =>
+          a(e(q.id, input.questId), e(q.userId, userId)),
+        columns: { id: true },
+      });
+      if (!owned) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Quest not found." });
+      }
+      return ctx.db.query.objective.findMany({
+        where: and(
+          eq(objective.questId, input.questId),
+          eq(objective.isArchived, true),
+        ),
+        orderBy: (o, { desc }) => [desc(o.updatedAt)],
+      });
     }),
 });

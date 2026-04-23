@@ -229,6 +229,42 @@ export async function deleteObjectiveFn(
   return { id: objectiveId };
 }
 
+/** Soft-deletes an objective by setting isArchived = true. */
+export async function archiveObjectiveFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  objectiveId: number,
+) {
+  const owned = await getOwnedObjective(db, objectiveId, userId);
+  if (!owned) throw new Error("Objective not found.");
+
+  const [updated] = await db
+    .update(objective)
+    .set({ isArchived: true })
+    .where(eq(objective.id, objectiveId))
+    .returning();
+
+  return updated!;
+}
+
+/** Restores a previously archived objective by clearing isArchived. */
+export async function restoreObjectiveFn(
+  db: ChapterObjectiveDb,
+  userId: string,
+  objectiveId: number,
+) {
+  const owned = await getOwnedObjective(db, objectiveId, userId);
+  if (!owned) throw new Error("Objective not found.");
+
+  const [updated] = await db
+    .update(objective)
+    .set({ isArchived: false })
+    .where(eq(objective.id, objectiveId))
+    .returning();
+
+  return updated!;
+}
+
 /**
  * Marks a BINARY objective as complete and triggers quest auto-archive.
  * Also accepts PROGRESS_BAR objectives (manual completion override).

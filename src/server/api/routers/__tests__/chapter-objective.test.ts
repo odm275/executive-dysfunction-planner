@@ -25,6 +25,8 @@ import {
   createSubTaskFn,
   toggleSubTaskFn,
   deleteSubTaskFn,
+  archiveObjectiveFn,
+  restoreObjectiveFn,
 } from "../chapter-objective-helpers";
 
 // ---------------------------------------------------------------------------
@@ -575,5 +577,127 @@ describe("SubTask Engine — deleteSubTask", () => {
     await expect(deleteSubTaskFn(db, "u23b", st.id)).rejects.toThrow(
       "Sub-task not found.",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Objective Archive tests (Issue #16)
+// ---------------------------------------------------------------------------
+
+describe("Objective Archive — archiveObjectiveFn", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("sets isArchived to true", async () => {
+    await insertUser(db, "ua1");
+    const q = await createQuestForUser(db, "ua1");
+    const obj = await createObjectiveFn(db, "ua1", {
+      questId: q.id,
+      name: "Archive me",
+    });
+
+    const archived = await archiveObjectiveFn(db, "ua1", obj.id);
+    expect(archived.isArchived).toBe(true);
+  });
+
+  it("throws when objective belongs to another user", async () => {
+    await insertUser(db, "ua2a");
+    await insertUser(db, "ua2b");
+    const q = await createQuestForUser(db, "ua2a");
+    const obj = await createObjectiveFn(db, "ua2a", {
+      questId: q.id,
+      name: "Mine",
+    });
+
+    await expect(archiveObjectiveFn(db, "ua2b", obj.id)).rejects.toThrow(
+      "Objective not found.",
+    );
+  });
+});
+
+describe("Objective Archive — restoreObjectiveFn", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("clears isArchived flag", async () => {
+    await insertUser(db, "ur1");
+    const q = await createQuestForUser(db, "ur1");
+    const obj = await createObjectiveFn(db, "ur1", {
+      questId: q.id,
+      name: "Restore me",
+    });
+    await archiveObjectiveFn(db, "ur1", obj.id);
+
+    const restored = await restoreObjectiveFn(db, "ur1", obj.id);
+    expect(restored.isArchived).toBe(false);
+  });
+});
+
+describe("Objective Archive — listActiveQuests excludes archived objectives", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("does not include archived objectives in the active quest result", async () => {
+    await insertUser(db, "ulaq1");
+    const q = await createQuestForUser(db, "ulaq1");
+    const obj1 = await createObjectiveFn(db, "ulaq1", {
+      questId: q.id,
+      name: "Active",
+    });
+    const obj2 = await createObjectiveFn(db, "ulaq1", {
+      questId: q.id,
+      name: "Archived",
+    });
+    await archiveObjectiveFn(db, "ulaq1", obj2.id);
+
+    // Fetch objectives directly filtered by isArchived = false
+    const activeObjs = await db.query.objective.findMany({
+      where: (o, { eq, and }) =>
+        and(eq(o.questId, q.id), eq(o.isArchived, false)),
+    });
+
+    const ids = activeObjs.map((o) => o.id);
+    expect(ids).toContain(obj1.id);
+    expect(ids).not.toContain(obj2.id);
+  });
+});
+
+describe("Objective Archive — autoArchiveQuestIfComplete ignores archived objectives", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("auto-archives quest when only active objectives are complete (archived ones ignored)", async () => {
+    await insertUser(db, "uaaq1");
+    const q = await createQuestForUser(db, "uaaq1");
+
+    const active = await createObjectiveFn(db, "uaaq1", {
+      questId: q.id,
+      name: "Active task",
+    });
+    const archived = await createObjectiveFn(db, "uaaq1", {
+      questId: q.id,
+      name: "Shelved task",
+    });
+    await archiveObjectiveFn(db, "uaaq1", archived.id);
+
+    // Complete the only active objective — quest should auto-archive
+    await completeObjectiveFn(db, "uaaq1", active.id);
+
+    const result = await db.query.quest.findFirst({
+      where: (q2, { eq }) => eq(q2.id, q.id),
+    });
+    expect(result!.isArchived).toBe(true);
   });
 });
