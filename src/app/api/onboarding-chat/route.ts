@@ -1,9 +1,17 @@
-import { streamText } from "ai";
+import { createDataStreamResponse, streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { type NextRequest } from "next/server";
 import { getSession } from "~/server/better-auth/server";
 
 export const runtime = "nodejs";
+
+function createFallbackResponse(content: string) {
+  return createDataStreamResponse({
+    execute(dataStream) {
+      dataStream.write(`0:${JSON.stringify(content)}\n`);
+    },
+  });
+}
 
 const ONBOARDING_SYSTEM_PROMPT = `You are a warm, calm assistant helping someone with executive dysfunction turn their thoughts into a structured quest plan.
 
@@ -62,25 +70,36 @@ export async function POST(req: NextRequest) {
     const isFirstMessage = messages.length <= 1;
     const fallback = isFirstMessage
       ? "Thanks for sharing that. It sounds like there's a lot going on. Let me help you break this down into something manageable. What feels like the most important piece to start with?"
-      : JSON.stringify(
-          {
-            questName: "My First Quest",
-            description: "Getting started",
-            isSideQuest: false,
-            chapters: [],
-            objectives: [
-              { name: "First step", difficulty: "EASY", chapterName: null, isDebuffed: false },
-              { name: "Next step", difficulty: "MEDIUM", chapterName: null, isDebuffed: false },
-            ],
-          },
-          null,
-          2,
-        );
+      : [
+          "```json",
+          JSON.stringify(
+            {
+              questName: "My First Quest",
+              description: "Getting started",
+              isSideQuest: false,
+              chapters: [],
+              objectives: [
+                {
+                  name: "First step",
+                  difficulty: "EASY",
+                  chapterName: null,
+                  isDebuffed: false,
+                },
+                {
+                  name: "Next step",
+                  difficulty: "MEDIUM",
+                  chapterName: null,
+                  isDebuffed: false,
+                },
+              ],
+            },
+            null,
+            2,
+          ),
+          "```",
+        ].join("\n");
 
-    return new Response(
-      JSON.stringify({ role: "assistant", content: fallback }),
-      { headers: { "content-type": "application/json" } },
-    );
+    return createFallbackResponse(fallback);
   }
 
   const anthropic = createAnthropic({ apiKey });

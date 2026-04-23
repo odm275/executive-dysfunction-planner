@@ -1,9 +1,17 @@
-import { streamText } from "ai";
+import { createDataStreamResponse, streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { type NextRequest } from "next/server";
 import { getSession } from "~/server/better-auth/server";
 
 export const runtime = "nodejs";
+
+function createFallbackResponse(content: string) {
+  return createDataStreamResponse({
+    execute(dataStream) {
+      dataStream.write(`0:${JSON.stringify(content)}\n`);
+    },
+  });
+}
 
 const SYSTEM_PROMPTS: Record<"HARD" | "LEGENDARY", string> = {
   HARD: `You are a warm, enthusiastic reward companion for someone with executive dysfunction who just completed a hard objective.
@@ -55,10 +63,7 @@ export async function POST(req: NextRequest) {
         ? `🏆 LEGENDARY achievement unlocked: "${objectiveName}"! That was seriously impressive. Take a moment to breathe — you earned a real celebration. What feels like the right reward right now?`
         : `⭐ Nice work finishing "${objectiveName}"! That was a hard one. You've earned a proper reward. What sounds good to you right now?`;
 
-    return new Response(
-      JSON.stringify({ role: "assistant", content: fallback }),
-      { headers: { "content-type": "application/json" } },
-    );
+    return createFallbackResponse(fallback);
   }
 
   const anthropic = createAnthropic({ apiKey });
