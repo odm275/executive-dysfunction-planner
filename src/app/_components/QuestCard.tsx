@@ -592,6 +592,75 @@ function ChapterSection({
 }
 
 // ---------------------------------------------------------------------------
+// QuickAddObjectiveForm
+// ---------------------------------------------------------------------------
+function QuickAddObjectiveForm({
+  questId,
+  onAdded,
+}: {
+  questId: number;
+  onAdded: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD" | "LEGENDARY">("MEDIUM");
+  const utils = api.useUtils();
+
+  const createObjective = api.objective.createObjective.useMutation({
+    onSuccess: () => {
+      setName("");
+      setDifficulty("MEDIUM");
+      void utils.quest.listActiveQuests.invalidate();
+      onAdded();
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    createObjective.mutate({ questId, name: trimmed, difficulty });
+  }
+
+  return (
+    <form
+      data-testid={`quick-add-objective-form-${questId}`}
+      onSubmit={handleSubmit}
+      className="mt-3 flex items-center gap-2 border-t border-white/10 px-3 pt-3"
+    >
+      <input
+        data-testid={`quick-add-objective-name-${questId}`}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Quick-add an objective…"
+        maxLength={255}
+        className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white/80 placeholder-white/25 outline-none focus:border-white/25"
+      />
+      <select
+        data-testid={`quick-add-objective-difficulty-${questId}`}
+        value={difficulty}
+        onChange={(e) =>
+          setDifficulty(e.target.value as typeof difficulty)
+        }
+        className="rounded border border-white/10 bg-[#0a0d1a] px-2 py-1.5 text-xs text-white/60 outline-none"
+      >
+        <option value="EASY">Easy</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="HARD">Hard</option>
+        <option value="LEGENDARY">Legendary</option>
+      </select>
+      <button
+        type="submit"
+        data-testid={`quick-add-objective-submit-${questId}`}
+        disabled={createObjective.isPending || !name.trim()}
+        className="rounded border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10 hover:text-white/80 disabled:opacity-40"
+      >
+        {createObjective.isPending ? "…" : "Add"}
+      </button>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // QuestCard
 // ---------------------------------------------------------------------------
 export function QuestCard({
@@ -763,6 +832,10 @@ export function QuestCard({
                 + Add more objectives
               </button>
             </div>
+          )}
+
+          {!showAddObjectivesChat && (
+            <QuickAddObjectiveForm questId={quest.id} onAdded={handleRefresh} />
           )}
 
           {showAddObjectivesChat && (
