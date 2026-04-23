@@ -35,6 +35,7 @@
     "@ai-sdk/anthropic": "^1.2.12",
     "@auth/drizzle-adapter": "^1.7.2",
     "@effect/cluster": "^0.57.0",
+    "@effect/experimental": "^0.59.0",
     "@effect/rpc": "^0.74.0",
     "@effect/sql": "^0.50.0",
     "@effect/workflow": "^0.17.0",
