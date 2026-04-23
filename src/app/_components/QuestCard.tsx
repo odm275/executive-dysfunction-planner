@@ -126,6 +126,16 @@ function ObjectiveDetail({
     },
   });
 
+  // Archive objective
+  const archiveObjective = api.objective.archiveObjective.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.objective.listArchivedObjectives.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+      onRefresh();
+    },
+  });
+
   // Counter-tool mutations
   const addCounterTool = api.debuff.addCounterTool.useMutation({
     onSuccess: () => {
@@ -251,6 +261,18 @@ function ObjectiveDetail({
           </button>
         </div>
       )}
+
+      {/* Archive button */}
+      <div className="mb-3">
+        <button
+          data-testid={`archive-objective-btn-${obj.id}`}
+          onClick={() => archiveObjective.mutate({ id: obj.id })}
+          disabled={archiveObjective.isPending}
+          className="rounded border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/40 hover:bg-white/10 hover:text-white/60 disabled:opacity-40"
+        >
+          {archiveObjective.isPending ? "Archiving…" : "Archive"}
+        </button>
+      </div>
 
       {/* Progress bar for PROGRESS_BAR mode */}
       {obj.trackingMode === "PROGRESS_BAR" && !obj.isCompleted && (
@@ -592,6 +614,77 @@ function ChapterSection({
 }
 
 // ---------------------------------------------------------------------------
+// ArchivedObjectivesDisclosure
+// ---------------------------------------------------------------------------
+function ArchivedObjectivesDisclosure({
+  questId,
+  onRestored,
+}: {
+  questId: number;
+  onRestored: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const utils = api.useUtils();
+
+  const { data: archivedObjectives } = api.objective.listArchivedObjectives.useQuery(
+    { questId },
+  );
+
+  const restoreObjective = api.objective.restoreObjective.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.objective.listArchivedObjectives.invalidate({ questId });
+      onRestored();
+    },
+  });
+
+  const count = archivedObjectives?.length ?? 0;
+  if (count === 0) return null;
+
+  return (
+    <div
+      data-testid={`archived-objectives-disclosure-${questId}`}
+      className="mt-3 border-t border-white/5 px-3 pt-3"
+    >
+      <button
+        data-testid={`archived-objectives-toggle-${questId}`}
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1 text-xs text-white/25 hover:text-white/50"
+        aria-expanded={expanded}
+      >
+        <span>{expanded ? "▾" : "▸"}</span>
+        <span>{count} archived</span>
+      </button>
+
+      {expanded && (
+        <ul
+          data-testid={`archived-objectives-list-${questId}`}
+          className="mt-2 space-y-1.5"
+        >
+          {archivedObjectives?.map((obj) => (
+            <li
+              key={obj.id}
+              data-testid={`archived-objective-item-${obj.id}`}
+              className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/3 px-2 py-1.5"
+            >
+              <span className="truncate text-xs text-white/40">{obj.name}</span>
+              <button
+                data-testid={`restore-objective-btn-${obj.id}`}
+                onClick={() => restoreObjective.mutate({ id: obj.id })}
+                disabled={restoreObjective.isPending}
+                className="shrink-0 rounded border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/40 hover:bg-white/10 hover:text-white/70 disabled:opacity-40"
+              >
+                Restore
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // QuickAddObjectiveForm
 // ---------------------------------------------------------------------------
 function QuickAddObjectiveForm({
@@ -832,6 +925,10 @@ export function QuestCard({
                 + Add more objectives
               </button>
             </div>
+          )}
+
+          {!showAddObjectivesChat && (
+            <ArchivedObjectivesDisclosure questId={quest.id} onRestored={handleRefresh} />
           )}
 
           {!showAddObjectivesChat && (
