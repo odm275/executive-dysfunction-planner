@@ -597,17 +597,19 @@ export function QuestCard({
   quest,
   focusObjectiveId,
   onObjectiveCompleted,
+  alwaysExpanded = false,
 }: {
   quest: Quest;
   focusObjectiveId?: number | null;
   onObjectiveCompleted?: (objectiveName: string, difficulty: string) => void;
+  alwaysExpanded?: boolean;
 }) {
   // Auto-expand the card when one of its objectives is focused via suggestion
   const hasFocusedObjective =
     focusObjectiveId != null &&
     quest.objectives.some((o) => o.id === focusObjectiveId);
 
-  const [expanded, setExpanded] = useState(hasFocusedObjective);
+  const [expanded, setExpanded] = useState(alwaysExpanded || hasFocusedObjective);
 
   useEffect(() => {
     if (hasFocusedObjective) setExpanded(true);
@@ -637,11 +639,13 @@ export function QuestCard({
           : "border-white/10 bg-white/5"
       }`}
     >
-      {/* Quest region header — tap to expand */}
+      {/* Quest region header — tap to expand (not shown when alwaysExpanded inside drawer) */}
       <button
-        data-testid={`quest-region-${quest.id}`}
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-start justify-between gap-3 p-4 text-left"
+        data-testid={alwaysExpanded ? undefined : `quest-region-${quest.id}`}
+        onClick={alwaysExpanded ? undefined : () => setExpanded((v) => !v)}
+        className={`flex w-full items-start justify-between gap-3 p-4 text-left${
+          alwaysExpanded ? " cursor-default" : ""
+        }`}
         aria-expanded={expanded}
       >
         <div className="min-w-0">
@@ -662,7 +666,9 @@ export function QuestCard({
 
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span className="text-sm font-semibold text-white/70">{pct}%</span>
-          <span className="text-xs text-white/30">{expanded ? "▲" : "▼"}</span>
+          {!alwaysExpanded && (
+            <span className="text-xs text-white/30">{expanded ? "▲" : "▼"}</span>
+          )}
         </div>
       </button>
 
