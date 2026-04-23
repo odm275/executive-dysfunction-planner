@@ -11,6 +11,7 @@ import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 
 type Difficulty = "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
 
+// Full quest proposal (new-quest mode)
 type ProposedObjective = {
   name: string;
   difficulty: Difficulty;
@@ -30,8 +31,20 @@ type QuestProposal = {
   objectives: ProposedObjective[];
 };
 
+// Objectives-only proposal (add-objectives mode)
+type ProposedAddObjective = {
+  name: string;
+  difficulty: Difficulty;
+  isRecruitable: boolean;
+};
+
+type AddObjectivesProposal = {
+  objectives: ProposedAddObjective[];
+};
+
 type EditableObjective = ProposedObjective & { accepted: boolean };
 type EditableChapter = ProposedChapter & { accepted: boolean };
+type EditableAddObjective = ProposedAddObjective & { accepted: boolean };
 
 const DIFFICULTY_COLOURS: Record<Difficulty, string> = {
   EASY: "bg-green-500/20 text-green-300 border border-green-500/30",
@@ -44,18 +57,40 @@ const DIFFICULTY_COLOURS: Record<Difficulty, string> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function extractProposal(content: string): QuestProposal | null {
+function extractQuestProposal(content: string): QuestProposal | null {
   const match = content.match(/```json\s*([\s\S]*?)```/);
   if (!match?.[1]) return null;
   try {
-    return JSON.parse(match[1]) as QuestProposal;
+    const parsed = JSON.parse(match[1]) as Record<string, unknown>;
+    if (!("questName" in parsed)) return null;
+    return parsed as unknown as QuestProposal;
   } catch {
     return null;
   }
 }
 
+function extractAddObjectivesProposal(
+  content: string,
+): AddObjectivesProposal | null {
+  const match = content.match(/```json\s*([\s\S]*?)```/);
+  if (!match?.[1]) return null;
+  try {
+    const parsed = JSON.parse(match[1]) as Record<string, unknown>;
+    if (!("objectives" in parsed) || "questName" in parsed) return null;
+    return parsed as unknown as AddObjectivesProposal;
+  } catch {
+    return null;
+  }
+}
+
+function hasProposal(content: string, mode: "new-quest" | "add-objectives") {
+  return mode === "new-quest"
+    ? extractQuestProposal(content) !== null
+    : extractAddObjectivesProposal(content) !== null;
+}
+
 // ---------------------------------------------------------------------------
-// ProposalReview
+// ProposalReview — new-quest mode (full quest)
 // ---------------------------------------------------------------------------
 
 function ProposalReview({
@@ -270,20 +305,157 @@ function ProposalReview({
 }
 
 // ---------------------------------------------------------------------------
-// QuestBuilderChat — new-quest mode
+// AddObjectivesProposalReview — add-objectives mode (objectives only)
 // ---------------------------------------------------------------------------
 
-type QuestBuilderChatProps = {
+function AddObjectivesProposalReview({
+  proposal,
+  onConfirm,
+  onRestart,
+}: {
+  proposal: AddObjectivesProposal;
+  onConfirm: (objectives: ProposedAddObjective[]) => void;
+  onRestart: () => void;
+}) {
+  const [objectives, setObjectives] = useState<EditableAddObjective[]>(
+    proposal.objectives.map((o) => ({ ...o, accepted: true })),
+  );
+
+  const acceptedObjectives = objectives.filter((o) => o.accepted);
+
+  return (
+    <div data-testid="add-objectives-proposal-review" className="space-y-5">
+      <p className="text-sm font-semibold text-[hsl(280,100%,70%)]">
+        Here are the proposed objectives — accept, edit, or reject each one:
+      </p>
+
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
+          New Objectives ({acceptedObjectives.length} of {objectives.length} accepted)
+        </p>
+        <div className="space-y-1.5">
+          {objectives.map((obj, i) => (
+            <div
+              key={i}
+              data-testid={`proposal-objective-${i}`}
+              className={`flex items-start gap-2 rounded-lg border p-2 ${
+                obj.accepted
+                  ? "border-white/10 bg-white/5"
+                  : "border-white/5 opacity-40"
+              }`}
+            >
+              <input
+                type="checkbox"
+                data-testid={`proposal-objective-accept-${i}`}
+                checked={obj.accepted}
+                onChange={(e) =>
+                  setObjectives((prev) =>
+                    prev.map((o, j) =>
+                      j === i ? { ...o, accepted: e.target.checked } : o,
+                    ),
+                  )
+                }
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(280,100%,70%)]"
+              />
+              <div className="min-w-0 flex-1">
+                <input
+                  data-testid={`proposal-objective-name-${i}`}
+                  value={obj.name}
+                  onChange={(e) =>
+                    setObjectives((prev) =>
+                      prev.map((o, j) =>
+                        j === i ? { ...o, name: e.target.value } : o,
+                      ),
+                    )
+                  }
+                  className="w-full rounded border-none bg-transparent text-sm text-white/80 outline-none focus:bg-white/10 focus:px-1"
+                />
+                <div className="mt-1">
+                  <select
+                    data-testid={`proposal-objective-difficulty-${i}`}
+                    value={obj.difficulty}
+                    onChange={(e) =>
+                      setObjectives((prev) =>
+                        prev.map((o, j) =>
+                          j === i
+                            ? { ...o, difficulty: e.target.value as Difficulty }
+                            : o,
+                        ),
+                      )
+                    }
+                    className={`rounded border-none px-1.5 py-0.5 text-xs outline-none ${DIFFICULTY_COLOURS[obj.difficulty]}`}
+                  >
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                    <option value="LEGENDARY">Legendary</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          data-testid="proposal-restart"
+          onClick={onRestart}
+          className="rounded border border-white/20 px-4 py-2 text-sm text-white/50 hover:text-white/70"
+        >
+          Start over
+        </button>
+        <button
+          data-testid="proposal-confirm"
+          onClick={() => onConfirm(acceptedObjectives)}
+          disabled={acceptedObjectives.length === 0}
+          className="flex-1 rounded bg-[hsl(280,100%,70%)]/20 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
+        >
+          Add Objectives ✨
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// QuestBuilderChat — unified component for both modes
+// ---------------------------------------------------------------------------
+
+type NewQuestProps = {
   mode: "new-quest";
   onSuccess: () => void;
   onCancel: () => void;
 };
 
-export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps) {
-  const [phase, setPhase] = useState<"chat" | "review" | "confirming" | "skip">(
-    "chat",
-  );
-  const [proposal, setProposal] = useState<QuestProposal | null>(null);
+type AddObjectivesProps = {
+  mode: "add-objectives";
+  questId: number;
+  questName: string;
+  existingObjectiveNames: string[];
+  onSuccess: () => void;
+  onCancel: () => void;
+};
+
+type QuestBuilderChatProps = NewQuestProps | AddObjectivesProps;
+
+export function QuestBuilderChat(props: QuestBuilderChatProps) {
+  const { mode, onSuccess, onCancel } = props;
+
+  const isAddMode = mode === "add-objectives";
+  const questId = isAddMode ? (props as AddObjectivesProps).questId : undefined;
+  const questNameContext = isAddMode
+    ? (props as AddObjectivesProps).questName
+    : undefined;
+  const existingObjectiveNames = isAddMode
+    ? (props as AddObjectivesProps).existingObjectiveNames
+    : [];
+
+  type Phase = "chat" | "review" | "confirming" | "skip";
+  const [phase, setPhase] = useState<Phase>("chat");
+  const [newQuestProposal, setNewQuestProposal] = useState<QuestProposal | null>(null);
+  const [addObjectivesProposal, setAddObjectivesProposal] =
+    useState<AddObjectivesProposal | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const utils = api.useUtils();
@@ -291,23 +463,39 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
   const createChapter = api.chapter.createChapter.useMutation();
   const createObjective = api.objective.createObjective.useMutation();
 
+  const chatBody =
+    mode === "add-objectives"
+      ? {
+          mode: "add-objectives",
+          questName: questNameContext,
+          existingObjectives: existingObjectiveNames.join("\n"),
+        }
+      : { mode: "new-quest" };
+
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } =
     useChat({
       api: "/api/quest-chat",
-      body: { mode: "new-quest" },
+      body: chatBody,
       onFinish: (message) => {
-        const extracted = extractProposal(message.content);
-        if (extracted) {
-          setProposal(extracted);
-          setPhase("review");
+        if (mode === "new-quest") {
+          const extracted = extractQuestProposal(message.content);
+          if (extracted) {
+            setNewQuestProposal(extracted);
+            setPhase("review");
+          }
+        } else {
+          const extracted = extractAddObjectivesProposal(message.content);
+          if (extracted) {
+            setAddObjectivesProposal(extracted);
+            setPhase("review");
+          }
         }
       },
     });
 
-  async function handleConfirm(finalProposal: QuestProposal) {
+  async function handleNewQuestConfirm(finalProposal: QuestProposal) {
     setPhase("confirming");
     setConfirmError(null);
-
     try {
       const q = await createQuest.mutateAsync({
         name: finalProposal.questName,
@@ -343,8 +531,31 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
     }
   }
 
-  // Show CreateQuestForm as a skip/fallback
-  if (phase === "skip") {
+  async function handleAddObjectivesConfirm(
+    objectives: ProposedAddObjective[],
+  ) {
+    if (!questId) return;
+    setPhase("confirming");
+    setConfirmError(null);
+    try {
+      for (const obj of objectives) {
+        await createObjective.mutateAsync({
+          questId,
+          name: obj.name,
+          difficulty: obj.difficulty,
+          isRecruitable: obj.isRecruitable,
+        });
+      }
+      void utils.quest.listActiveQuests.invalidate();
+      onSuccess();
+    } catch (err) {
+      setConfirmError((err as Error).message);
+      setPhase("review");
+    }
+  }
+
+  // Skip to quick-add form (new-quest mode only)
+  if (phase === "skip" && mode === "new-quest") {
     return (
       <CreateQuestForm
         onSuccess={onSuccess}
@@ -353,6 +564,8 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
     );
   }
 
+  const title = mode === "add-objectives" ? `Add Objectives` : "New Quest";
+
   return (
     <div
       data-testid="quest-builder-chat"
@@ -360,7 +573,7 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-white/90 text-sm">New Quest</h3>
+        <h3 className="font-semibold text-white/90 text-sm">{title}</h3>
         <button
           data-testid="quest-builder-discard"
           onClick={onCancel}
@@ -370,32 +583,44 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
         </button>
       </div>
 
+      {/* Confirming spinner */}
+      {phase === "confirming" && (
+        <div className="flex items-center justify-center gap-3 py-12">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          <span className="text-white/50">
+            {mode === "add-objectives" ? "Adding objectives…" : "Creating your quest…"}
+          </span>
+        </div>
+      )}
+
+      {/* Error */}
+      {confirmError && (
+        <p className="rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
+          {confirmError}
+        </p>
+      )}
+
       {/* Review phase */}
-      {(phase === "review" || phase === "confirming") && (
-        <>
-          {confirmError && (
-            <p className="rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
-              {confirmError}
-            </p>
-          )}
-          {phase === "confirming" ? (
-            <div className="flex items-center justify-center gap-3 py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              <span className="text-white/50">Creating your quest…</span>
-            </div>
-          ) : (
-            proposal && (
-              <ProposalReview
-                proposal={proposal}
-                onConfirm={handleConfirm}
-                onRestart={() => {
-                  setPhase("chat");
-                  setProposal(null);
-                }}
-              />
-            )
-          )}
-        </>
+      {phase === "review" && mode === "new-quest" && newQuestProposal && (
+        <ProposalReview
+          proposal={newQuestProposal}
+          onConfirm={handleNewQuestConfirm}
+          onRestart={() => {
+            setPhase("chat");
+            setNewQuestProposal(null);
+          }}
+        />
+      )}
+
+      {phase === "review" && mode === "add-objectives" && addObjectivesProposal && (
+        <AddObjectivesProposalReview
+          proposal={addObjectivesProposal}
+          onConfirm={handleAddObjectivesConfirm}
+          onRestart={() => {
+            setPhase("chat");
+            setAddObjectivesProposal(null);
+          }}
+        />
       )}
 
       {/* Chat phase */}
@@ -404,19 +629,32 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
           {/* Opening prompt */}
           {messages.length === 0 && (
             <div className="rounded-xl border border-[hsl(280,100%,70%)]/20 bg-[hsl(280,100%,70%)]/5 px-4 py-3 text-center">
-              <p className="text-sm font-semibold text-white">
-                What&apos;s the new quest about?
-              </p>
-              <p className="mt-1 text-xs text-white/40">
-                Tell me what you want to accomplish.
-              </p>
+              {mode === "add-objectives" ? (
+                <>
+                  <p className="text-sm font-semibold text-white">
+                    What should we add to &ldquo;{questNameContext}&rdquo;?
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Tell me what else needs to happen.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-white">
+                    What&apos;s the new quest about?
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Tell me what you want to accomplish.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
           {/* Messages */}
           <div className="space-y-3">
             {messages
-              .filter((m) => !extractProposal(m.content))
+              .filter((m) => !hasProposal(m.content, mode))
               .map((m) => (
                 <div
                   key={m.id}
@@ -453,7 +691,11 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
               value={input}
               onChange={handleInputChange}
               placeholder={
-                messages.length === 0 ? "Describe your quest…" : "Reply…"
+                messages.length === 0
+                  ? mode === "add-objectives"
+                    ? "What needs to be done…"
+                    : "Describe your quest…"
+                  : "Reply…"
               }
               autoFocus
               className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 placeholder-white/30 outline-none focus:border-[hsl(280,100%,70%)]/40"
@@ -476,23 +718,29 @@ export function QuestBuilderChat({ onSuccess, onCancel }: QuestBuilderChatProps)
                 void append({
                   role: "user",
                   content:
-                    "That's everything. Please propose a structured quest now.",
+                    mode === "add-objectives"
+                      ? "That's everything. Please propose objectives now."
+                      : "That's everything. Please propose a structured quest now.",
                 });
               }}
               className="text-center text-xs text-white/30 hover:text-white/60"
             >
-              I&apos;m done — propose a quest →
+              {mode === "add-objectives"
+                ? "I'm done — propose objectives →"
+                : "I'm done — propose a quest →"}
             </button>
           )}
 
-          {/* Skip to quick add */}
-          <button
-            data-testid="quest-chat-skip"
-            onClick={() => setPhase("skip")}
-            className="text-center text-xs text-white/20 hover:text-white/50"
-          >
-            Skip chat — quick add
-          </button>
+          {/* Skip to quick add (new-quest only) */}
+          {mode === "new-quest" && (
+            <button
+              data-testid="quest-chat-skip"
+              onClick={() => setPhase("skip")}
+              className="text-center text-xs text-white/20 hover:text-white/50"
+            >
+              Skip chat — quick add
+            </button>
+          )}
         </>
       )}
     </div>

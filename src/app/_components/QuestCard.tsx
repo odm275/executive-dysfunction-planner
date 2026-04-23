@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { EditQuestForm } from "~/app/_components/EditQuestForm";
+import { QuestBuilderChat } from "~/app/_components/QuestBuilderChat";
 
 type SubTask = {
   id: number;
@@ -616,6 +617,7 @@ export function QuestCard({
   }, [hasFocusedObjective]);
 
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showAddObjectivesChat, setShowAddObjectivesChat] = useState(false);
 
   const utils = api.useUtils();
   const handleRefresh = () => {
@@ -738,10 +740,45 @@ export function QuestCard({
             </ul>
           )}
 
-          {quest.objectives.length === 0 && (
-            <p className="px-3 py-2 text-xs text-white/30">
-              No objectives yet.
-            </p>
+          {quest.objectives.length === 0 && !showAddObjectivesChat && (
+            <div className="px-3 py-4 text-center">
+              <p className="mb-3 text-xs text-white/30">No objectives yet.</p>
+              <button
+                data-testid={`add-objectives-cta-${quest.id}`}
+                onClick={() => setShowAddObjectivesChat(true)}
+                className="rounded-lg border border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/10 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/20"
+              >
+                ✨ Add objectives
+              </button>
+            </div>
+          )}
+
+          {quest.objectives.length > 0 && !showAddObjectivesChat && (
+            <div className="mt-2 px-3">
+              <button
+                data-testid={`add-more-objectives-link-${quest.id}`}
+                onClick={() => setShowAddObjectivesChat(true)}
+                className="text-xs text-white/30 hover:text-white/60"
+              >
+                + Add more objectives
+              </button>
+            </div>
+          )}
+
+          {showAddObjectivesChat && (
+            <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
+              <QuestBuilderChat
+                mode="add-objectives"
+                questId={quest.id}
+                questName={quest.name}
+                existingObjectiveNames={quest.objectives.map((o) => o.name)}
+                onSuccess={() => {
+                  setShowAddObjectivesChat(false);
+                  handleRefresh();
+                }}
+                onCancel={() => setShowAddObjectivesChat(false)}
+              />
+            </div>
           )}
         </div>
       )}
