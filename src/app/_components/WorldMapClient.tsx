@@ -213,12 +213,24 @@ function QuestDrawer({
   onClose: () => void;
   onObjectiveCompleted: (name: string, difficulty: string) => void;
 }) {
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
+
+  function handleClose() {
+    if (
+      hasUnsavedEdits &&
+      !window.confirm("You have unsaved changes. Discard them and close?")
+    ) {
+      return;
+    }
+    onClose();
+  }
+
   return (
     <>
       {/* Backdrop */}
       <div
         className="absolute inset-0 z-20 bg-black/40"
-        onClick={onClose}
+        onClick={handleClose}
       />
       {/* Panel */}
       <div
@@ -229,7 +241,7 @@ function QuestDrawer({
           <h3 className="font-semibold text-white/80">Quest Detail</h3>
           <button
             data-testid="quest-drawer-close"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded p-1 text-white/40 hover:bg-white/10 hover:text-white/80"
             aria-label="Close drawer"
           >
@@ -242,6 +254,7 @@ function QuestDrawer({
             quest={quest}
             focusObjectiveId={focusObjectiveId}
             onObjectiveCompleted={onObjectiveCompleted}
+            onUnsavedEditsChange={setHasUnsavedEdits}
             alwaysExpanded
           />
         </div>

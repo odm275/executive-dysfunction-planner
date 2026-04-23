@@ -81,16 +81,41 @@ function objectiveProgress(obj: Objective): number {
 function ObjectiveDetail({
   obj,
   isSideQuest,
+  chapters,
   onRefresh,
   onCompleted,
+  onEditingChange,
 }: {
   obj: Objective;
   isSideQuest: boolean;
+  chapters: Chapter[];
   onRefresh: () => void;
   onCompleted?: (objectiveName: string, difficulty: string) => void;
+  onEditingChange?: (isEditing: boolean) => void;
 }) {
   const progress = objectiveProgress(obj);
   const utils = api.useUtils();
+
+  // ---- Edit mode state ----
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(obj.name);
+  const [editDifficulty, setEditDifficulty] = useState<Objective["difficulty"]>(obj.difficulty);
+  const [editChapterId, setEditChapterId] = useState<number | null | undefined>(obj.chapterId);
+  const [editIsRecruitable, setEditIsRecruitable] = useState(obj.isRecruitable);
+
+  function enterEdit() {
+    setEditName(obj.name);
+    setEditDifficulty(obj.difficulty);
+    setEditChapterId(obj.chapterId);
+    setEditIsRecruitable(obj.isRecruitable);
+    setIsEditing(true);
+    onEditingChange?.(true);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+    onEditingChange?.(false);
+  }
 
   // Invite link generation
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -107,7 +132,7 @@ function ObjectiveDetail({
     { enabled: obj.isRecruitable },
   );
 
-  // Debuff toggle
+  // Debuff toggle / update objective
   const updateObjective = api.objective.updateObjective.useMutation({
     onSuccess: () => {
       void utils.quest.listActiveQuests.invalidate();
@@ -115,6 +140,24 @@ function ObjectiveDetail({
       onRefresh();
     },
   });
+
+  function saveEdit() {
+    updateObjective.mutate(
+      {
+        id: obj.id,
+        name: editName.trim() || obj.name,
+        difficulty: editDifficulty,
+        chapterId: editChapterId === undefined ? null : editChapterId,
+        isRecruitable: editIsRecruitable,
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+          onEditingChange?.(false);
+        },
+      },
+    );
+  }
 
   // Complete objective
   const completeObjective = api.objective.completeObjective.useMutation({
@@ -200,14 +243,104 @@ function ObjectiveDetail({
       data-testid={`objective-detail-${obj.id}`}
       className="rounded-lg border border-white/10 bg-white/5 p-4"
     >
+      {/* Edit form */}
+      {isEditing && (
+        <div
+          data-testid={`objective-edit-form-${obj.id}`}
+          className="mb-3 space-y-2 rounded-lg border border-white/15 bg-white/5 p-3"
+        >
+          <div>
+            <label className="mb-0.5 block text-xs text-white/40">Name</label>
+            <input
+              data-testid={`objective-edit-name-${obj.id}`}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 outline-none focus:border-white/40"
+            />
+          </div>
+          <div>
+            <label className="mb-0.5 block text-xs text-white/40">Difficulty</label>
+            <select
+              data-testid={`objective-edit-difficulty-${obj.id}`}
+              value={editDifficulty}
+              onChange={(e) => setEditDifficulty(e.target.value as Objective["difficulty"])}
+              className="rounded border border-white/20 bg-[#0a0d1a] px-2 py-1 text-sm text-white/80 outline-none"
+            >
+              <option value="EASY">Easy</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard</option>
+              <option value="LEGENDARY">Legendary</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-0.5 block text-xs text-white/40">Chapter</label>
+            <select
+              data-testid={`objective-edit-chapter-${obj.id}`}
+              value={editChapterId ?? ""}
+              onChange={(e) =>
+                setEditChapterId(
+                  e.target.value === "" ? null : Number(e.target.value),
+                )
+              }
+              className="rounded border border-white/20 bg-[#0a0d1a] px-2 py-1 text-sm text-white/80 outline-none"
+            >
+              <option value="">No chapter</option>
+              {chapters.map((ch) => (
+                <option key={ch.id} value={ch.id}>
+                  {ch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              data-testid={`objective-edit-recruitable-${obj.id}`}
+              checked={editIsRecruitable}
+              onChange={(e) => setEditIsRecruitable(e.target.checked)}
+              className="h-4 w-4 accent-cyan-400"
+            />
+            <span className="text-xs text-white/60">Recruitable</span>
+          </label>
+          <div className="flex gap-2 pt-1">
+            <button
+              data-testid={`objective-edit-cancel-${obj.id}`}
+              onClick={cancelEdit}
+              className="rounded border border-white/20 px-3 py-1.5 text-xs text-white/50 hover:text-white/70"
+            >
+              Cancel
+            </button>
+            <button
+              data-testid={`objective-edit-save-${obj.id}`}
+              onClick={saveEdit}
+              disabled={updateObjective.isPending || !editName.trim()}
+              className="rounded bg-[hsl(280,100%,70%)]/20 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
+            >
+              {updateObjective.isPending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header row */}
       <div className="mb-3 flex items-start justify-between gap-2">
         <span className="font-semibold text-white/90">{obj.name}</span>
-        <span
-          className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLOURS[obj.difficulty]}`}
-        >
-          {DIFFICULTY_LABELS[obj.difficulty]}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {!isEditing && (
+            <button
+              data-testid={`objective-edit-btn-${obj.id}`}
+              onClick={enterEdit}
+              className="text-xs text-white/30 hover:text-white/60"
+            >
+              Edit
+            </button>
+          )}
+          <span
+            className={`rounded px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLOURS[obj.difficulty]}`}
+          >
+            {DIFFICULTY_LABELS[obj.difficulty]}
+          </span>
+        </div>
       </div>
 
       {/* Attributes row */}
@@ -494,15 +627,19 @@ function ObjectiveDetail({
 function ObjectiveRow({
   obj,
   isSideQuest,
+  chapters,
   autoExpand,
   onRefresh,
   onCompleted,
+  onEditingChange,
 }: {
   obj: Objective;
   isSideQuest: boolean;
+  chapters: Chapter[];
   autoExpand?: boolean;
   onRefresh: () => void;
   onCompleted?: (objectiveName: string, difficulty: string) => void;
+  onEditingChange?: (isEditing: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(autoExpand ?? false);
 
@@ -549,7 +686,7 @@ function ObjectiveRow({
       </button>
       {expanded && (
         <div className="mt-1 px-3 pb-2">
-          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} onRefresh={onRefresh} onCompleted={onCompleted} />
+          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} chapters={chapters} onRefresh={onRefresh} onCompleted={onCompleted} onEditingChange={onEditingChange} />
         </div>
       )}
     </li>
@@ -563,16 +700,20 @@ function ChapterSection({
   chapter,
   objectives,
   isSideQuest,
+  chapters,
   focusObjectiveId,
   onRefresh,
   onCompleted,
+  onEditingChange,
 }: {
   chapter: Chapter;
   objectives: Objective[];
   isSideQuest: boolean;
+  chapters: Chapter[];
   focusObjectiveId?: number | null;
   onRefresh: () => void;
   onCompleted?: (objectiveName: string, difficulty: string) => void;
+  onEditingChange?: (isEditing: boolean) => void;
 }) {
   const hasFocusedObjective =
     focusObjectiveId != null &&
@@ -602,9 +743,11 @@ function ChapterSection({
               key={obj.id}
               obj={obj}
               isSideQuest={isSideQuest}
+              chapters={chapters}
               autoExpand={focusObjectiveId === obj.id}
               onRefresh={onRefresh}
               onCompleted={onCompleted}
+              onEditingChange={onEditingChange}
             />
           ))}
         </ul>
@@ -760,11 +903,13 @@ export function QuestCard({
   quest,
   focusObjectiveId,
   onObjectiveCompleted,
+  onUnsavedEditsChange,
   alwaysExpanded = false,
 }: {
   quest: Quest;
   focusObjectiveId?: number | null;
   onObjectiveCompleted?: (objectiveName: string, difficulty: string) => void;
+  onUnsavedEditsChange?: (hasEdits: boolean) => void;
   alwaysExpanded?: boolean;
 }) {
   // Auto-expand the card when one of its objectives is focused via suggestion
@@ -780,6 +925,12 @@ export function QuestCard({
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [showAddObjectivesChat, setShowAddObjectivesChat] = useState(false);
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
+
+  function handleEditingChange(isEditing: boolean) {
+    setHasUnsavedEdits(isEditing);
+    onUnsavedEditsChange?.(isEditing);
+  }
 
   const utils = api.useUtils();
   const handleRefresh = () => {
@@ -879,14 +1030,14 @@ export function QuestCard({
                 chapter={ch}
                 objectives={chObjs}
                 isSideQuest={quest.isSideQuest}
+                chapters={quest.chapters}
                 focusObjectiveId={focusObjectiveId}
                 onRefresh={handleRefresh}
                 onCompleted={onObjectiveCompleted}
+                onEditingChange={handleEditingChange}
               />
             );
           })}
-
-          {/* Top-level objectives (no chapter) */}
           {topLevelObjectives.length > 0 && (
             <ul className="space-y-1">
               {topLevelObjectives.map((obj) => (
@@ -894,9 +1045,11 @@ export function QuestCard({
                   key={obj.id}
                   obj={obj}
                   isSideQuest={quest.isSideQuest}
+                  chapters={quest.chapters}
                   autoExpand={focusObjectiveId === obj.id}
                   onRefresh={handleRefresh}
                   onCompleted={onObjectiveCompleted}
+                  onEditingChange={handleEditingChange}
                 />
               ))}
             </ul>

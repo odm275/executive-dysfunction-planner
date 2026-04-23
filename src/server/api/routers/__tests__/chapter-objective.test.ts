@@ -287,6 +287,38 @@ describe("Objective Engine — updateObjective", () => {
     expect(updated.name).toBe("New name");
     expect(updated.difficulty).toBe("LEGENDARY");
   });
+
+  it("updates chapterId to assign objective to a chapter", async () => {
+    await insertUser(db, "u12b");
+    const q = await createQuestForUser(db, "u12b");
+    const ch = await createChapterFn(db, "u12b", { questId: q.id, name: "Act I" });
+    const obj = await createObjectiveFn(db, "u12b", { questId: q.id, name: "Task" });
+
+    const updated = await updateObjectiveFn(db, "u12b", {
+      id: obj.id,
+      chapterId: ch.id,
+    });
+
+    expect(updated.chapterId).toBe(ch.id);
+  });
+
+  it("clears chapterId when set to null", async () => {
+    await insertUser(db, "u12c");
+    const q = await createQuestForUser(db, "u12c");
+    const ch = await createChapterFn(db, "u12c", { questId: q.id, name: "Act I" });
+    const obj = await createObjectiveFn(db, "u12c", {
+      questId: q.id,
+      name: "Task",
+      chapterId: ch.id,
+    });
+
+    const updated = await updateObjectiveFn(db, "u12c", {
+      id: obj.id,
+      chapterId: null,
+    });
+
+    expect(updated.chapterId).toBeNull();
+  });
 });
 
 describe("Objective Engine — deleteObjective", () => {

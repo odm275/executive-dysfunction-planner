@@ -51,6 +51,7 @@ export const objectiveRouter = createTRPCRouter({
         id: z.number().int(),
         name: z.string().min(1).max(255).optional(),
         difficulty: DifficultyEnum.optional(),
+        chapterId: z.number().int().nullable().optional(),
         isDebuffed: z.boolean().optional(),
         isRecruitable: z.boolean().optional(),
         order: z.number().int().optional(),

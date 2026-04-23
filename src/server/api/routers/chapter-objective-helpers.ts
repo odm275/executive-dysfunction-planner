@@ -188,6 +188,7 @@ export async function updateObjectiveFn(
     id: number;
     name?: string;
     difficulty?: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
+    chapterId?: number | null;
     isDebuffed?: boolean;
     isRecruitable?: boolean;
     order?: number;
