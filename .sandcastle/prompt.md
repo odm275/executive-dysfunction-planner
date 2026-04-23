@@ -27,7 +27,7 @@ Pick the highest-priority open issue that is not blocked by another open issue.
 
 1. **Explore** — read the issue carefully. Pull in the parent PRD if referenced. Read the relevant source files and tests before writing any code.
 2. **Plan** — decide what to change and why. Keep the change as small as possible.
-3. **Execute** — use RGR (Red → Green → Repeat → Refactor): write a failing test first, then write the implementation to pass it.
+3. **Execute** — follow the TDD skill at `.agents/skills/tdd/SKILL.md`. Use the red→green tracer-bullet loop: one failing test, minimal implementation to pass it, repeat. Do NOT write all tests before writing any code (horizontal slicing).
 4. **Verify** — run `npm run typecheck` and `npm run test` before committing. Fix any failures before proceeding.
 5. **Commit** — make a single git commit. The message MUST:
    - Start with `RALPH:` prefix
