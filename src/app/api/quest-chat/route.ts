@@ -13,10 +13,69 @@ function createFallbackResponse(content: string) {
   });
 }
 
-const BASE_SYSTEM_PROMPT = `You are a warm, calm assistant helping someone manage their ongoing quests and objectives. You already know this user — skip the onboarding tone. Be concise and practical.
+// System prompt for new-quest mode — full quest proposal
+const NEW_QUEST_SYSTEM_PROMPT = `You are a warm, calm assistant helping a returning user plan a new quest. You already know this person — skip the first-time onboarding tone. Be direct and practical but still supportive.
 
 ## Conversation phase
-- Acknowledge what the user shares with warmth but briefly.
+- Acknowledge what the user shares briefly.
+- Ask ONE clarifying question at a time if needed.
+- Keep responses short — 2–4 sentences.
+- After a focused 2–4 message exchange, produce a structured proposal.
+
+## Proposal format
+When ready, output EXACTLY this JSON block (nothing before or after the JSON):
+
+\`\`\`json
+{
+  "questName": "Short, clear quest name",
+  "description": "Optional one-line description or null",
+  "isSideQuest": false,
+  "chapters": [
+    { "name": "Chapter name" }
+  ],
+  "objectives": [
+    {
+      "name": "Objective name",
+      "difficulty": "EASY|MEDIUM|HARD|LEGENDARY",
+      "chapterName": "Chapter name or null",
+      "isDebuffed": false
+    }
+  ]
+}
+\`\`\`
+
+Rules for the proposal:
+- Propose exactly 3–5 objectives — adapt count to the complexity described.
+- chapters array may be empty if the quest is simple.
+- Each objective must have a chapterName matching one of the chapters, or null for top-level.
+- difficulty must be one of: EASY, MEDIUM, HARD, LEGENDARY.
+- isDebuffed should only be true if the user explicitly mentions emotional charge.
+- Keep names concrete and actionable.`;
+
+// System prompt for add-objectives mode — objectives only, no duplicates
+function buildAddObjectivesPrompt(
+  questName?: string,
+  existingObjectives?: string,
+): string {
+  const contextLines: string[] = [];
+
+  if (questName) {
+    contextLines.push(`## Quest context\nQuest name: "${questName}"`);
+  }
+
+  if (existingObjectives) {
+    contextLines.push(
+      `## Existing objectives (do NOT suggest these or close duplicates)\n${existingObjectives}`,
+    );
+  }
+
+  const context =
+    contextLines.length > 0 ? `\n\n${contextLines.join("\n\n")}` : "";
+
+  return `You are a warm, calm assistant helping a user add more objectives to an existing quest. Be direct and practical.${context}
+
+## Conversation phase
+- Acknowledge what the user shares briefly.
 - Ask ONE clarifying question at a time if needed.
 - Keep responses short — 2–4 sentences.
 - After a focused 2–4 message exchange, produce a structured proposal.
@@ -39,38 +98,30 @@ When ready, output EXACTLY this JSON block (nothing before or after the JSON):
 Rules for the proposal:
 - Propose exactly 3–5 objectives — no fewer, no more.
 - difficulty must be one of: EASY, MEDIUM, HARD, LEGENDARY.
-- isRecruitable should only be true if the user mentions wanting a collaborator for that item.
-- Keep names concrete and actionable.`;
-
-function buildSystemPrompt(
-  mode: string,
-  questName?: string,
-  existingObjectives?: string,
-): string {
-  if (mode !== "add-objectives") return BASE_SYSTEM_PROMPT;
-
-  const contextLines: string[] = [];
-
-  if (questName) {
-    contextLines.push(`## Quest context\nQuest name: "${questName}"`);
-  }
-
-  if (existingObjectives) {
-    contextLines.push(
-      `## Existing objectives (do NOT suggest these or close duplicates)\n${existingObjectives}`,
-    );
-  }
-
-  if (contextLines.length === 0) return BASE_SYSTEM_PROMPT;
-
-  return `${BASE_SYSTEM_PROMPT}\n\n${contextLines.join("\n\n")}`;
+- isRecruitable should only be true if the user mentions wanting a collaborator.
+- Keep names concrete and actionable.
+- Do not repeat or closely duplicate any existing objectives listed above.`;
 }
 
-const STUB_OBJECTIVES = [
-  { name: "First step", difficulty: "EASY", isRecruitable: false },
-  { name: "Second step", difficulty: "MEDIUM", isRecruitable: false },
-  { name: "Third step", difficulty: "MEDIUM", isRecruitable: false },
-];
+const NEW_QUEST_STUB = {
+  questName: "My New Quest",
+  description: null,
+  isSideQuest: false,
+  chapters: [],
+  objectives: [
+    { name: "First step", difficulty: "EASY", chapterName: null, isDebuffed: false },
+    { name: "Second step", difficulty: "MEDIUM", chapterName: null, isDebuffed: false },
+    { name: "Third step", difficulty: "MEDIUM", chapterName: null, isDebuffed: false },
+  ],
+};
+
+const ADD_OBJECTIVES_STUB = {
+  objectives: [
+    { name: "First step", difficulty: "EASY", isRecruitable: false },
+    { name: "Second step", difficulty: "MEDIUM", isRecruitable: false },
+    { name: "Third step", difficulty: "MEDIUM", isRecruitable: false },
+  ],
+};
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -90,20 +141,20 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     const isFirstMessage = messages.length <= 1;
+    const stub = mode === "add-objectives" ? ADD_OBJECTIVES_STUB : NEW_QUEST_STUB;
     const fallback = isFirstMessage
-      ? "Got it — let's figure out what needs to happen here. What's the first thing that comes to mind when you think about this?"
-      : [
-          "```json",
-          JSON.stringify({ objectives: STUB_OBJECTIVES }, null, 2),
-          "```",
-        ].join("\n");
+      ? "Got it — let's figure out what needs to happen here. What's the first thing that comes to mind?"
+      : ["```json", JSON.stringify(stub, null, 2), "```"].join("\n");
 
     return createFallbackResponse(fallback);
   }
 
   const anthropic = createAnthropic({ apiKey });
 
-  const systemPrompt = buildSystemPrompt(mode, questName, existingObjectives);
+  const systemPrompt =
+    mode === "add-objectives"
+      ? buildAddObjectivesPrompt(questName, existingObjectives)
+      : NEW_QUEST_SYSTEM_PROMPT;
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-6"),

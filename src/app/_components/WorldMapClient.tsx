@@ -6,6 +6,7 @@ import { QuestCard } from "~/app/_components/QuestCard";
 import { SuggestionOverlay } from "~/app/_components/SuggestionOverlay";
 import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
 import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
+import { QuestBuilderChat } from "~/app/_components/QuestBuilderChat";
 import { RewardMenu } from "~/app/_components/RewardMenu";
 import { RewardChat } from "~/app/_components/RewardChat";
 import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
@@ -454,8 +455,9 @@ export function WorldMapClient() {
         {/* Create quest modal */}
         {showCreateForm && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-4">
-            <div className="w-full max-w-md">
-              <CreateQuestForm
+            <div className="w-full max-w-md overflow-y-auto max-h-screen py-8">
+              <QuestBuilderChat
+                mode="new-quest"
                 onSuccess={() => setShowCreateForm(false)}
                 onCancel={() => setShowCreateForm(false)}
               />
