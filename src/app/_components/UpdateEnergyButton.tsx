@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
 
@@ -28,36 +30,35 @@ export function UpdateEnergyButton({ currentEnergy }: UpdateEnergyButtonProps) {
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="outline"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/20"
         aria-label="Update energy level"
       >
         <span>Energy: {ENERGY_LABELS[currentEnergy]}</span>
-        <span className="text-white/40">▾</span>
-      </button>
+        <span className="text-muted-foreground">▾</span>
+      </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-xl border border-white/10 bg-[#1a0533] shadow-xl">
-          {(["LOW", "MEDIUM", "HIGH"] as EnergyLevel[]).map((level) => (
-            <button
-              key={level}
-              onClick={() => setEnergy.mutate({ value: level })}
-              disabled={setEnergy.isPending}
-              aria-label={ENERGY_LABELS[level]}
-              className={`w-full px-4 py-3 text-left text-sm transition hover:bg-white/10 disabled:opacity-50 ${
-                level === currentEnergy
-                  ? "font-semibold text-white"
-                  : "text-white/70"
-              }`}
-            >
-              {ENERGY_LABELS[level]}
-              {level === currentEnergy && (
-                <span className="ml-2 text-purple-400">✓</span>
-              )}
-            </button>
-          ))}
-        </div>
+        <Card className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden p-0">
+          <CardContent className="flex flex-col gap-0 p-0">
+            {(["LOW", "MEDIUM", "HIGH"] as EnergyLevel[]).map((level) => (
+              <Button
+                key={level}
+                variant="ghost"
+                onClick={() => setEnergy.mutate({ value: level })}
+                disabled={setEnergy.isPending}
+                aria-label={ENERGY_LABELS[level]}
+                className="w-full justify-start rounded-none px-4 py-3 text-left text-sm"
+              >
+                {ENERGY_LABELS[level]}
+                {level === currentEnergy && (
+                  <span className="ml-2 text-primary">✓</span>
+                )}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
