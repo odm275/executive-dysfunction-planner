@@ -2,6 +2,17 @@
 
 import { useChat } from "ai/react";
 import { useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
 
 type Props = {
   objectiveName: string;
@@ -14,9 +25,9 @@ const DIFFICULTY_LABELS = {
   LEGENDARY: "Legendary ✨",
 };
 
-const DIFFICULTY_COLOURS = {
-  HARD: "border-orange-500/30 bg-orange-500/10 text-orange-300",
-  LEGENDARY: "border-purple-500/30 bg-purple-500/10 text-purple-300",
+const DIFFICULTY_BADGE_VARIANTS: Record<"HARD" | "LEGENDARY", "hard" | "legendary"> = {
+  HARD: "hard",
+  LEGENDARY: "legendary",
 };
 
 export function RewardChat({ objectiveName, difficulty, onClose }: Props) {
@@ -40,51 +51,49 @@ export function RewardChat({ objectiveName, difficulty, onClose }: Props) {
   }, []);
 
   return (
-    <div
-      data-testid="reward-chat"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="flex w-full max-w-md flex-col rounded-2xl border border-[hsl(280,100%,70%)]/20 bg-[#1a0533] shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div>
-            <h2 className="font-bold text-white">
-              {difficulty === "LEGENDARY" ? "🏆 Legendary Win!" : "⭐ Well Done!"}
-            </h2>
-            <p className="mt-0.5 text-xs text-white/40">
-              Completed:{" "}
-              <span className="font-medium text-white/60">{objectiveName}</span>
-            </p>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        data-testid="reward-chat"
+        className="flex max-w-md flex-col"
+        showCloseButton={false}
+      >
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>
+                {difficulty === "LEGENDARY" ? "🏆 Legendary Win!" : "⭐ Well Done!"}
+              </DialogTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Completed:{" "}
+                <span className="font-medium">{objectiveName}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={DIFFICULTY_BADGE_VARIANTS[difficulty]}>
+                {DIFFICULTY_LABELS[difficulty]}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="reward-chat-close"
+                onClick={onClose}
+              >
+                ✕
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`rounded px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLOURS[difficulty]}`}
-            >
-              {DIFFICULTY_LABELS[difficulty]}
-            </span>
-            <button
-              data-testid="reward-chat-close"
-              onClick={onClose}
-              className="text-white/40 hover:text-white/70"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+        </DialogHeader>
 
         {/* Messages — only show assistant messages to keep UI clean */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 max-h-80">
+        <div className="flex-1 overflow-y-auto space-y-3 max-h-80 py-2">
           {messages.length === 0 && !isLoading && !error && (
-            <p className="text-sm text-white/30">Starting your celebration…</p>
+            <p className="text-sm text-muted-foreground">Starting your celebration…</p>
           )}
 
           {error && (
-            <p className="text-sm text-red-400">
-              Something went wrong. Close and try again.
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>Something went wrong. Close and try again.</AlertDescription>
+            </Alert>
           )}
 
           {messages
@@ -93,21 +102,20 @@ export function RewardChat({ objectiveName, difficulty, onClose }: Props) {
               <div
                 key={m.id}
                 data-testid="reward-chat-assistant-msg"
-                className="rounded-lg bg-[hsl(280,100%,70%)]/10 px-3 py-2 text-sm text-white/90"
+                className="rounded-lg bg-muted px-3 py-2 text-sm"
               >
                 {m.content}
               </div>
             ))}
 
-          {/* Show user messages (reactions) after the first AI message */}
           {messages
             .filter((m) => m.role === "user")
-            .slice(1) // skip the auto-trigger message
+            .slice(1)
             .map((m) => (
               <div
                 key={m.id}
                 data-testid="reward-chat-user-msg"
-                className="ml-8 rounded-lg bg-white/10 px-3 py-2 text-sm text-white/70"
+                className="ml-8 rounded-lg bg-muted/50 px-3 py-2 text-sm"
               >
                 {m.content}
               </div>
@@ -115,8 +123,8 @@ export function RewardChat({ objectiveName, difficulty, onClose }: Props) {
 
           {isLoading && (
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/60" />
-              <span className="text-xs text-white/30">Thinking…</span>
+              <Loader2 className="size-3 animate-spin text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Thinking…</span>
             </div>
           )}
         </div>
@@ -125,25 +133,24 @@ export function RewardChat({ objectiveName, difficulty, onClose }: Props) {
         <form
           data-testid="reward-chat-form"
           onSubmit={handleSubmit}
-          className="flex gap-2 border-t border-white/10 px-4 py-3"
+          className="flex gap-2 border-t border-border pt-3"
         >
-          <input
+          <Input
             data-testid="reward-chat-input"
             value={input}
             onChange={handleInputChange}
             placeholder="React or ask…"
-            className="flex-1 rounded border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/90 placeholder-white/30 outline-none focus:border-[hsl(280,100%,70%)]/40"
+            className="flex-1"
           />
-          <button
+          <Button
             type="submit"
             data-testid="reward-chat-send"
             disabled={isLoading || !input.trim()}
-            className="rounded bg-[hsl(280,100%,70%)]/20 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
           >
             Send
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 type Props = {
   onSuccess: () => void;
@@ -42,22 +47,21 @@ export function CreateQuestForm({ onSuccess, onCancel }: Props) {
     <form
       data-testid="create-quest-form"
       onSubmit={handleSubmit}
-      className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3"
+      className="space-y-3 p-4"
     >
-      <h3 className="font-semibold text-white/90 text-sm">New Quest</h3>
+      <h3 className="font-semibold text-sm">New Quest</h3>
 
       {error && (
-        <p data-testid="create-quest-error" className="rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription data-testid="create-quest-error">{error}</AlertDescription>
+        </Alert>
       )}
 
-      {/* Quest name */}
-      <div>
-        <label className="mb-1 block text-xs text-white/50" htmlFor="quest-name">
-          Name <span className="text-red-400">*</span>
-        </label>
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="quest-name">
+          Name <span className="text-destructive">*</span>
+        </Label>
+        <Input
           id="quest-name"
           data-testid="create-quest-name"
           value={name}
@@ -65,64 +69,55 @@ export function CreateQuestForm({ onSuccess, onCancel }: Props) {
           placeholder="e.g. Driving Lessons"
           maxLength={255}
           required
-          className="w-full rounded border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/40"
         />
       </div>
 
-      {/* Optional description */}
-      <div>
-        <label className="mb-1 block text-xs text-white/50" htmlFor="quest-description">
-          Description (optional)
-        </label>
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="quest-description">Description (optional)</Label>
+        <Input
           id="quest-description"
           data-testid="create-quest-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="A short description…"
           maxLength={500}
-          className="w-full rounded border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/40"
         />
       </div>
 
       {/* Side Quest toggle */}
-      <label
+      <Label
         data-testid="create-quest-side-quest-label"
-        className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2"
       >
-        <input
-          type="checkbox"
+        <Checkbox
           data-testid="create-quest-side-quest-toggle"
           checked={isSideQuest}
-          onChange={(e) => setIsSideQuest(e.target.checked)}
-          className="h-4 w-4 accent-cyan-400"
+          onCheckedChange={(checked) => setIsSideQuest(Boolean(checked))}
         />
-        <span className="text-sm text-white/70">
+        <span className="text-sm">
           Side Quest{" "}
-          <span className="text-xs text-white/30">
+          <span className="text-xs text-muted-foreground">
             — passion project, no debuff mechanics
           </span>
         </span>
-      </label>
+      </Label>
 
-      {/* Actions */}
       <div className="flex justify-end gap-2 pt-1">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           data-testid="create-quest-cancel"
           onClick={onCancel}
-          className="rounded px-4 py-2 text-sm text-white/40 hover:text-white/70"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           data-testid="create-quest-submit"
           disabled={createQuest.isPending || !name.trim()}
-          className="rounded bg-[hsl(280,100%,70%)]/20 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
         >
           {createQuest.isPending ? "Creating…" : "Create Quest"}
-        </button>
+        </Button>
       </div>
     </form>
   );

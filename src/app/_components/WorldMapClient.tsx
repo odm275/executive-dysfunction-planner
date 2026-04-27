@@ -1,17 +1,30 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { EnergyCheckIn } from "~/app/_components/EnergyCheckIn";
 import { QuestCard } from "~/app/_components/QuestCard";
 import { SuggestionOverlay } from "~/app/_components/SuggestionOverlay";
 import { UpdateEnergyButton } from "~/app/_components/UpdateEnergyButton";
-import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { QuestBuilderChat } from "~/app/_components/QuestBuilderChat";
 import { RewardMenu } from "~/app/_components/RewardMenu";
 import { RewardChat } from "~/app/_components/RewardChat";
 import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
 import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
 import { ReminderPreferences } from "~/app/_components/ReminderPreferences";
+import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+} from "~/components/ui/dialog";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Separator } from "~/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "~/components/ui/sheet";
 import { api } from "~/trpc/react";
 
 type EnergyLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -82,10 +95,11 @@ function QuestMapNode({
       }}
       className="absolute flex flex-col items-center"
     >
-      <button
+      <Button
+        variant="ghost"
         data-testid={`quest-region-${quest.id}`}
         onClick={onClick}
-        className={`relative rounded-full transition-all focus:outline-none ${
+        className={`relative h-auto rounded-full p-0 transition-all focus:outline-none ${
           isSelected ? "scale-110" : "hover:scale-105"
         }`}
         style={{
@@ -145,18 +159,18 @@ function QuestMapNode({
             {pct}%
           </text>
         </svg>
-      </button>
+      </Button>
 
       {/* Label beneath node */}
       <div className="mt-1.5 max-w-[96px] text-center">
         <p
-          className="truncate text-xs font-semibold leading-tight text-white/80"
+          className="truncate text-xs font-semibold leading-tight"
           title={quest.name}
         >
           {quest.name}
         </p>
         {quest.isSideQuest && (
-          <span className="mt-0.5 inline-block rounded bg-cyan-500/20 px-1 py-0.5 text-[10px] font-medium text-cyan-300">
+          <span className="mt-0.5 inline-block rounded bg-secondary px-1 py-0.5 text-[10px] font-medium text-secondary-foreground">
             Side Quest
           </span>
         )}
@@ -199,71 +213,6 @@ function MapPaths({ count }: { count: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// QuestDrawer — right-side slide-in panel
-// ---------------------------------------------------------------------------
-function QuestDrawer({
-  quest,
-  focusObjectiveId,
-  onClose,
-  onObjectiveCompleted,
-}: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  quest: any;
-  focusObjectiveId: number | null;
-  onClose: () => void;
-  onObjectiveCompleted: (name: string, difficulty: string) => void;
-}) {
-  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
-
-  function handleClose() {
-    if (
-      hasUnsavedEdits &&
-      !window.confirm("You have unsaved changes. Discard them and close?")
-    ) {
-      return;
-    }
-    onClose();
-  }
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 z-20 bg-black/40"
-        onClick={handleClose}
-      />
-      {/* Panel */}
-      <div
-        data-testid="quest-drawer"
-        className="absolute right-0 top-0 z-30 flex h-full w-full flex-col border-l border-white/10 bg-[#0d0f1e] md:w-[420px]"
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
-          <h3 className="font-semibold text-white/80">Quest Detail</h3>
-          <button
-            data-testid="quest-drawer-close"
-            onClick={handleClose}
-            className="rounded p-1 text-white/40 hover:bg-white/10 hover:text-white/80"
-            aria-label="Close drawer"
-          >
-            ✕
-          </button>
-        </div>
-        {/* Scrollable content lives only inside the drawer */}
-        <div className="flex-1 overflow-y-auto p-3">
-          <QuestCard
-            quest={quest}
-            focusObjectiveId={focusObjectiveId}
-            onObjectiveCompleted={onObjectiveCompleted}
-            onUnsavedEditsChange={setHasUnsavedEdits}
-            alwaysExpanded
-          />
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // WorldMapClient
 // ---------------------------------------------------------------------------
 export function WorldMapClient() {
@@ -288,6 +237,7 @@ export function WorldMapClient() {
   } | null>(null);
   const [showReminderPrefs, setShowReminderPrefs] = useState(false);
   const [selectedQuestId, setSelectedQuestId] = useState<number | null>(null);
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
 
   const handleObjectiveCompleted = useCallback(
     (objectiveName: string, difficulty: string) => {
@@ -298,7 +248,6 @@ export function WorldMapClient() {
     [],
   );
 
-  // When a suggestion is selected, open the matching quest in the drawer
   const [focusedObjectiveId, setFocusedObjectiveId] = useState<number | null>(
     null,
   );
@@ -311,21 +260,31 @@ export function WorldMapClient() {
     [],
   );
 
-  // Only block render on energy loading — quests load inside the map
+  function handleDrawerClose(open: boolean) {
+    if (open) return;
+    if (
+      hasUnsavedEdits &&
+      !window.confirm("You have unsaved changes. Discard them and close?")
+    ) {
+      return;
+    }
+    setSelectedQuestId(null);
+    setFocusedObjectiveId(null);
+    setHasUnsavedEdits(false);
+  }
+
   if (energyLoading || hasAnyQuestsLoading || profileLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#1a0533] to-[#0a0d1a]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // Party Members see a limited dashboard
   if (profile?.accountTier === "PARTY_MEMBER") {
     return <PartyMemberDashboard />;
   }
 
-  // First-time user: show onboarding conversation
   if (!hasAnyQuests && !onboardingComplete) {
     return (
       <OnboardingConversation
@@ -334,7 +293,6 @@ export function WorldMapClient() {
     );
   }
 
-  // Show energy check-in if not yet set today
   if (!todayEnergy && !justSet) {
     return <EnergyCheckIn onComplete={() => setJustSet(true)} />;
   }
@@ -351,28 +309,29 @@ export function WorldMapClient() {
       : null;
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-gradient-to-b from-[#1a0533] to-[#0a0d1a] text-white">
+    <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <h1 className="text-xl font-bold tracking-tight">
-          Executive Dysfunction{" "}
-          <span className="text-[hsl(280,100%,70%)]">Planner</span>
+          Executive Dysfunction Planner
         </h1>
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             data-testid="whats-my-reward-btn"
             onClick={() => setShowRewardMenu(true)}
-            className="rounded border border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/10 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/20"
           >
             🎁 Reward?
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             data-testid="reminder-prefs-btn"
             onClick={() => setShowReminderPrefs(true)}
-            className="rounded border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50 hover:bg-white/10"
           >
             🔔
-          </button>
+          </Button>
           <UpdateEnergyButton currentEnergy={energy} />
         </div>
       </header>
@@ -389,7 +348,7 @@ export function WorldMapClient() {
         <div className="absolute left-4 top-3 z-10 flex items-baseline gap-3">
           <h2 className="text-lg font-extrabold">Your World Map</h2>
           <span
-            className="text-xs text-white/40"
+            className="text-xs text-muted-foreground"
             data-testid="slots-remaining"
           >
             {slotsRemaining > 0
@@ -397,20 +356,21 @@ export function WorldMapClient() {
               : "Quest limit reached"}
           </span>
           {slotsRemaining > 0 && !showCreateForm && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               data-testid="add-quest-btn"
               onClick={() => setShowCreateForm(true)}
-              className="rounded bg-[hsl(280,100%,70%)]/20 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30"
             >
               + New Quest
-            </button>
+            </Button>
           )}
         </div>
 
         {/* HUD: energy badge — bottom left, above suggestion overlay */}
-        <p className="absolute bottom-14 left-4 z-10 text-xs text-white/50">
+        <p className="absolute bottom-14 left-4 z-10 text-xs text-muted-foreground">
           Energy:{" "}
-          <span className="font-semibold text-white">{energy}</span>
+          <span className="font-semibold text-foreground">{energy}</span>
         </p>
 
         {/* Suggestion overlay — floating HUD bottom-left */}
@@ -426,14 +386,14 @@ export function WorldMapClient() {
         {/* Quest nodes */}
         {questsLoading ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : activeQuests.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <p className="text-lg font-semibold text-white/50">
+            <p className="text-lg font-semibold text-muted-foreground">
               No active quests yet.
             </p>
-            <p className="max-w-xs text-sm text-white/30">
+            <p className="max-w-xs text-sm text-muted-foreground/70">
               Your adventure awaits — add your first quest to get started.
             </p>
           </div>
@@ -453,38 +413,62 @@ export function WorldMapClient() {
         )}
 
         {/* Quest drawer */}
-        {selectedQuest && (
-          <QuestDrawer
-            quest={selectedQuest}
-            focusObjectiveId={focusedObjectiveId}
-            onClose={() => {
-              setSelectedQuestId(null);
-              setFocusedObjectiveId(null);
-            }}
-            onObjectiveCompleted={handleObjectiveCompleted}
-          />
-        )}
+        <Sheet
+          open={selectedQuestId !== null}
+          onOpenChange={handleDrawerClose}
+        >
+          <SheetContent
+            data-testid="quest-drawer"
+            side="right"
+            className="flex w-full flex-col p-0 sm:max-w-[420px]"
+            showCloseButton={false}
+          >
+            <SheetHeader className="border-b px-4 py-3">
+              <div className="flex items-center justify-between">
+                <SheetTitle>Quest Detail</SheetTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="quest-drawer-close"
+                  onClick={() => handleDrawerClose(false)}
+                  aria-label="Close drawer"
+                >
+                  ✕
+                </Button>
+              </div>
+            </SheetHeader>
+            <ScrollArea className="flex-1 p-3">
+              {selectedQuest && (
+                <QuestCard
+                  quest={selectedQuest}
+                  focusObjectiveId={focusedObjectiveId}
+                  onObjectiveCompleted={handleObjectiveCompleted}
+                  onUnsavedEditsChange={setHasUnsavedEdits}
+                  alwaysExpanded
+                />
+              )}
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
 
-        {/* Create quest modal */}
-        {showCreateForm && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-4">
-            <div className="w-full max-w-md overflow-y-auto max-h-screen py-8">
-              <QuestBuilderChat
-                mode="new-quest"
-                onSuccess={() => setShowCreateForm(false)}
-                onCancel={() => setShowCreateForm(false)}
-              />
-            </div>
-          </div>
-        )}
+        {/* Create quest dialog */}
+        <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+          <DialogContent className="max-w-md p-0" showCloseButton={false}>
+            <QuestBuilderChat
+              mode="new-quest"
+              onSuccess={() => setShowCreateForm(false)}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Reward Menu modal */}
+      {/* Reward Menu dialog */}
       {showRewardMenu && (
         <RewardMenu onClose={() => setShowRewardMenu(false)} />
       )}
 
-      {/* AI Reward Chat modal */}
+      {/* AI Reward Chat dialog */}
       {rewardChat && (
         <RewardChat
           objectiveName={rewardChat.objectiveName}
@@ -493,7 +477,7 @@ export function WorldMapClient() {
         />
       )}
 
-      {/* Reminder Preferences modal */}
+      {/* Reminder Preferences dialog */}
       {showReminderPrefs && (
         <ReminderPreferences onClose={() => setShowReminderPrefs(false)} />
       )}
