@@ -26,6 +26,7 @@ export const objectiveRouter = createTRPCRouter({
         questId: z.number().int(),
         chapterId: z.number().int().optional(),
         name: z.string().min(1).max(255),
+        description: z.string().optional(),
         trackingMode: z.enum(["BINARY", "PROGRESS_BAR"]).default("BINARY"),
         difficulty: DifficultyEnum.default("MEDIUM"),
         isDebuffed: z.boolean().default(false),
@@ -50,6 +51,7 @@ export const objectiveRouter = createTRPCRouter({
       z.object({
         id: z.number().int(),
         name: z.string().min(1).max(255).optional(),
+        description: z.string().nullable().optional(),
         difficulty: DifficultyEnum.optional(),
         chapterId: z.number().int().nullable().optional(),
         isDebuffed: z.boolean().optional(),

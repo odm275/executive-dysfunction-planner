@@ -600,13 +600,13 @@ export function QuestBuilderChat(props: QuestBuilderChatProps) {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm">{title}</h3>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           data-testid="quest-builder-discard"
           onClick={onCancel}
-          className="text-xs text-muted-foreground h-auto px-2 py-0.5"
+          className="text-xs"
         >
-          Discard
+          ✕ Cancel
         </Button>
       </div>
 

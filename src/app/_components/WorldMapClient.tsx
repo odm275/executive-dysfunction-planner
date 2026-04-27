@@ -12,6 +12,7 @@ import { RewardChat } from "~/app/_components/RewardChat";
 import { OnboardingConversation } from "~/app/_components/OnboardingConversation";
 import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
 import { ReminderPreferences } from "~/app/_components/ReminderPreferences";
+import { ArchivedQuestsSheet } from "~/app/_components/ArchivedQuestsSheet";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -231,6 +232,7 @@ export function WorldMapClient() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showRewardMenu, setShowRewardMenu] = useState(false);
+  const [showArchivedQuests, setShowArchivedQuests] = useState(false);
   const [rewardChat, setRewardChat] = useState<{
     objectiveName: string;
     difficulty: "HARD" | "LEGENDARY";
@@ -316,6 +318,14 @@ export function WorldMapClient() {
           Executive Dysfunction Planner
         </h1>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="archives-btn"
+            onClick={() => setShowArchivedQuests(true)}
+          >
+            🗂 Archives
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -462,6 +472,12 @@ export function WorldMapClient() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Archives Sheet */}
+      <ArchivedQuestsSheet
+        open={showArchivedQuests}
+        onOpenChange={setShowArchivedQuests}
+      />
 
       {/* Reward Menu dialog */}
       {showRewardMenu && (

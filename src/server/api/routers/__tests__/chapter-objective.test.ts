@@ -616,6 +616,81 @@ describe("SubTask Engine — deleteSubTask", () => {
 // Objective Archive tests (Issue #16)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Objective Description tests (Issue #40)
+// ---------------------------------------------------------------------------
+
+describe("Objective Description — createObjectiveFn", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("persists description when provided", async () => {
+    await insertUser(db, "ud1");
+    const q = await createQuestForUser(db, "ud1");
+
+    const obj = await createObjectiveFn(db, "ud1", {
+      questId: q.id,
+      name: "Documented step",
+      description: "This is why it matters",
+    });
+
+    expect(obj.description).toBe("This is why it matters");
+  });
+
+  it("succeeds with no description (nullable)", async () => {
+    await insertUser(db, "ud2");
+    const q = await createQuestForUser(db, "ud2");
+
+    const obj = await createObjectiveFn(db, "ud2", {
+      questId: q.id,
+      name: "No notes",
+    });
+
+    expect(obj.description).toBeNull();
+  });
+});
+
+describe("Objective Description — updateObjectiveFn", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("can set a description on an existing objective", async () => {
+    await insertUser(db, "ud3");
+    const q = await createQuestForUser(db, "ud3");
+    const obj = await createObjectiveFn(db, "ud3", { questId: q.id, name: "Task" });
+
+    const updated = await updateObjectiveFn(db, "ud3", {
+      id: obj.id,
+      description: "Added notes",
+    });
+
+    expect(updated.description).toBe("Added notes");
+  });
+
+  it("can clear a description by setting it to null", async () => {
+    await insertUser(db, "ud4");
+    const q = await createQuestForUser(db, "ud4");
+    const obj = await createObjectiveFn(db, "ud4", {
+      questId: q.id,
+      name: "Task",
+      description: "Some notes",
+    });
+
+    const updated = await updateObjectiveFn(db, "ud4", {
+      id: obj.id,
+      description: null,
+    });
+
+    expect(updated.description).toBeNull();
+  });
+});
+
 describe("Objective Archive — archiveObjectiveFn", () => {
   let db: TestDb;
 

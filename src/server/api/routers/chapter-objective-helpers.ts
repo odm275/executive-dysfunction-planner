@@ -147,6 +147,7 @@ export async function createObjectiveFn(
     questId: number;
     chapterId?: number;
     name: string;
+    description?: string | null;
     trackingMode?: "BINARY" | "PROGRESS_BAR";
     difficulty?: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
     isDebuffed?: boolean;
@@ -170,6 +171,7 @@ export async function createObjectiveFn(
       questId: input.questId,
       chapterId: input.chapterId,
       name: input.name,
+      description: input.description ?? null,
       trackingMode: input.trackingMode ?? "BINARY",
       difficulty: input.difficulty ?? "MEDIUM",
       isDebuffed: input.isDebuffed ?? false,
@@ -187,6 +189,7 @@ export async function updateObjectiveFn(
   input: {
     id: number;
     name?: string;
+    description?: string | null;
     difficulty?: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
     chapterId?: number | null;
     isDebuffed?: boolean;

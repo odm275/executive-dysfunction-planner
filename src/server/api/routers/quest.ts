@@ -7,6 +7,7 @@ import { quest } from "~/server/db/schema";
 import {
   MAX_ACTIVE_QUESTS,
   autoArchiveQuestIfComplete,
+  archiveQuestFn,
 } from "./quest-helpers";
 
 export { MAX_ACTIVE_QUESTS, autoArchiveQuestIfComplete };
@@ -158,13 +159,44 @@ export const questRouter = createTRPCRouter({
   }),
 
   /**
-   * List all archived quests for the current user.
+   * Archive a quest (sets isArchived = true).
+   * Uses a dedicated mutation to keep the authorization surface explicit.
+   */
+  archiveQuest: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      try {
+        await archiveQuestFn(ctx.db, userId, input.id);
+        return { id: input.id };
+      } catch (err) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: (err as Error).message,
+        });
+      }
+    }),
+
+  /**
+   * List all archived quests for the current user (with chapters and objectives).
    */
   listArchivedQuests: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
     return ctx.db.query.quest.findMany({
       where: and(eq(quest.userId, userId), eq(quest.isArchived, true)),
+      with: {
+        chapters: {
+          orderBy: (c, { asc }) => [asc(c.order)],
+        },
+        objectives: {
+          with: {
+            subTasks: { orderBy: (s, { asc }) => [asc(s.order)] },
+            counterTools: true,
+          },
+          orderBy: (o, { asc }) => [asc(o.order)],
+        },
+      },
       orderBy: (q, { desc }) => [desc(q.updatedAt)],
     });
   }),

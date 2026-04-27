@@ -14,6 +14,27 @@ export const MAX_ACTIVE_QUESTS = 6;
 export type QuestDb = LibSQLDatabase<typeof schema>;
 
 /**
+ * Archives a quest by setting isArchived = true.
+ * Verifies ownership; throws if the quest does not belong to userId.
+ */
+export async function archiveQuestFn(
+  db: QuestDb,
+  userId: string,
+  questId: number,
+): Promise<void> {
+  const existing = await db.query.quest.findFirst({
+    where: and(eq(quest.id, questId), eq(quest.userId, userId)),
+    columns: { id: true },
+  });
+  if (!existing) throw new Error("Quest not found.");
+
+  await db
+    .update(quest)
+    .set({ isArchived: true })
+    .where(and(eq(quest.id, questId), eq(quest.userId, userId)));
+}
+
+/**
  * Checks whether every *active* (non-archived) objective in the given quest is
  * completed and, if so, flips the quest to isArchived = true.
  *

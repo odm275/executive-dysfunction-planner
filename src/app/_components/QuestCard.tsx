@@ -15,6 +15,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import { Input } from "~/components/ui/input";
+import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Progress } from "~/components/ui/progress";
 import {
@@ -42,6 +43,7 @@ type CounterTool = {
 type Objective = {
   id: number;
   name: string;
+  description: string | null;
   trackingMode: "BINARY" | "PROGRESS_BAR";
   difficulty: "EASY" | "MEDIUM" | "HARD" | "LEGENDARY";
   isDebuffed: boolean;
@@ -127,12 +129,17 @@ function ObjectiveDetail({
   const [editDifficulty, setEditDifficulty] = useState<Objective["difficulty"]>(obj.difficulty);
   const [editChapterId, setEditChapterId] = useState<number | null | undefined>(obj.chapterId);
   const [editIsRecruitable, setEditIsRecruitable] = useState(obj.isRecruitable);
+  const [editDescription, setEditDescription] = useState(obj.description ?? "");
+
+  // ---- Description collapse state ----
+  const [descriptionOpen, setDescriptionOpen] = useState(true);
 
   function enterEdit() {
     setEditName(obj.name);
     setEditDifficulty(obj.difficulty);
     setEditChapterId(obj.chapterId);
     setEditIsRecruitable(obj.isRecruitable);
+    setEditDescription(obj.description ?? "");
     setIsEditing(true);
     onEditingChange?.(true);
   }
@@ -171,6 +178,7 @@ function ObjectiveDetail({
       {
         id: obj.id,
         name: editName.trim() || obj.name,
+        description: editDescription.trim() || null,
         difficulty: editDifficulty,
         chapterId: editChapterId === undefined ? null : editChapterId,
         isRecruitable: editIsRecruitable,
@@ -330,6 +338,16 @@ function ObjectiveDetail({
             />
             <span className="text-xs text-muted-foreground">Recruitable</span>
           </Label>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Description (optional)</Label>
+            <Textarea
+              data-testid={`objective-edit-description-${obj.id}`}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Add context, motivation, or approach notes…"
+              className="min-h-20 text-sm"
+            />
+          </div>
           <div className="flex gap-2 pt-1">
             <Button
               variant="outline"
@@ -385,6 +403,33 @@ function ObjectiveDetail({
           <Badge variant="outline">✓ Complete</Badge>
         )}
       </div>
+
+      {/* Description section — collapsible, expanded by default */}
+      {!isEditing && (obj.description ?? "") !== "" && (
+        <div className="mb-3">
+          <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
+            <CollapsibleTrigger
+              data-testid={`objective-description-toggle-${obj.id}`}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {descriptionOpen ? (
+                <ChevronDown className="size-3" />
+              ) : (
+                <ChevronRight className="size-3" />
+              )}
+              <span>Notes</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <p
+                data-testid={`objective-description-${obj.id}`}
+                className="mt-1.5 rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
+              >
+                {obj.description}
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
 
       {/* Debuff toggle — hidden for Side Quest objectives */}
       {!obj.isCompleted && !isSideQuest && (
@@ -826,6 +871,12 @@ function ArchivedObjectivesDisclosure({
     },
   });
 
+  const deleteObjective = api.objective.deleteObjective.useMutation({
+    onSuccess: () => {
+      void utils.objective.listArchivedObjectives.invalidate({ questId });
+    },
+  });
+
   const count = archivedObjectives?.length ?? 0;
   if (count === 0) return null;
 
@@ -859,16 +910,28 @@ function ArchivedObjectivesDisclosure({
                 className="flex items-center justify-between gap-2 rounded border border-border/50 bg-muted/20 px-2 py-1.5"
               >
                 <span className="truncate text-xs text-muted-foreground">{obj.name}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  data-testid={`restore-objective-btn-${obj.id}`}
-                  onClick={() => restoreObjective.mutate({ id: obj.id })}
-                  disabled={restoreObjective.isPending}
-                  className="shrink-0 h-auto px-2 py-0.5 text-xs"
-                >
-                  Restore
-                </Button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    data-testid={`restore-objective-btn-${obj.id}`}
+                    onClick={() => restoreObjective.mutate({ id: obj.id })}
+                    disabled={restoreObjective.isPending}
+                    className="h-auto px-2 py-0.5 text-xs"
+                  >
+                    Restore
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid={`delete-archived-objective-btn-${obj.id}`}
+                    onClick={() => deleteObjective.mutate({ id: obj.id })}
+                    disabled={deleteObjective.isPending}
+                    className="h-auto px-2 py-0.5 text-xs text-destructive/60 hover:text-destructive"
+                  >
+                    Delete
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -994,6 +1057,13 @@ export function QuestCard({
     void utils.suggestion.getSuggestions.invalidate();
   };
 
+  const archiveQuest = api.quest.archiveQuest.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+      void utils.suggestion.getSuggestions.invalidate();
+    },
+  });
+
   const pct = progressPercent(quest.objectives);
 
   // Separate objectives by chapter membership
@@ -1039,9 +1109,9 @@ export function QuestCard({
           </div>
         </CollapsibleTrigger>
 
-        {/* Edit button — shown when expanded */}
+        {/* Edit and Archive buttons — shown when expanded */}
         {expanded && !showEditForm && (
-          <div className="px-4 pb-1">
+          <div className="flex items-center gap-2 px-4 pb-1">
             <Button
               variant="ghost"
               size="sm"
@@ -1050,6 +1120,20 @@ export function QuestCard({
               className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
             >
               Edit quest
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid={`quest-archive-btn-${quest.id}`}
+              onClick={() => archiveQuest.mutate({ id: quest.id })}
+              disabled={archiveQuest.isPending}
+              className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
+            >
+              {archiveQuest.isPending ? (
+                <><Loader2 className="size-3 animate-spin" /> Archiving…</>
+              ) : (
+                "🗄️ Archive quest"
+              )}
             </Button>
           </div>
         )}

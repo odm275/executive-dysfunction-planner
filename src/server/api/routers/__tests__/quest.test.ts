@@ -14,7 +14,7 @@ import * as schema from "~/server/db/schema";
 import { quest, objective } from "~/server/db/schema";
 
 // Import only the pure helpers — not the tRPC router (which pulls in better-auth)
-import { MAX_ACTIVE_QUESTS, autoArchiveQuestIfComplete } from "../quest-helpers";
+import { MAX_ACTIVE_QUESTS, autoArchiveQuestIfComplete, archiveQuestFn } from "../quest-helpers";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -359,5 +359,75 @@ describe("Quest Engine — auto-archive trigger", () => {
       where: eq(quest.id, q.id),
     });
     expect(refreshed!.isArchived).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// archiveQuestFn tests (Issue #40)
+// ---------------------------------------------------------------------------
+
+describe("Quest Engine — archiveQuest", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("sets isArchived = true and quest no longer appears in active list", async () => {
+    await insertUser(db, "aq1");
+    const q = await createQuest(db, "aq1", "To Archive");
+
+    await archiveQuestFn(db, "aq1", q.id);
+
+    const refreshed = await db.query.quest.findFirst({ where: eq(quest.id, q.id) });
+    expect(refreshed!.isArchived).toBe(true);
+
+    const active = await db.query.quest.findMany({
+      where: and(eq(quest.userId, "aq1"), eq(quest.isArchived, false)),
+    });
+    expect(active).toHaveLength(0);
+  });
+
+  it("rejects when the quest belongs to a different user", async () => {
+    await insertUser(db, "aq2a");
+    await insertUser(db, "aq2b");
+    const q = await createQuest(db, "aq2a", "Mine");
+
+    await expect(archiveQuestFn(db, "aq2b", q.id)).rejects.toThrow("Quest not found.");
+  });
+});
+
+describe("Quest Engine — listArchivedQuests with chapters and objectives", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("returns archived quests with their objectives and chapters", async () => {
+    await insertUser(db, "alq1");
+    const q = await createQuest(db, "alq1", "Archived Quest");
+
+    // Add an objective
+    await db.insert(objective).values({ questId: q.id, name: "Task 1" }).returning();
+
+    // Archive the quest
+    await archiveQuestFn(db, "alq1", q.id);
+
+    // Query like listArchivedQuests extended form
+    const archived = await db.query.quest.findMany({
+      where: and(eq(quest.userId, "alq1"), eq(quest.isArchived, true)),
+      with: {
+        chapters: true,
+        objectives: true,
+      },
+      orderBy: (q2, { desc }) => [desc(q2.updatedAt)],
+    });
+
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.name).toBe("Archived Quest");
+    expect(archived[0]!.objectives).toHaveLength(1);
+    expect(archived[0]!.objectives[0]!.name).toBe("Task 1");
+    expect(archived[0]!.chapters).toHaveLength(0);
   });
 });

@@ -181,6 +181,7 @@ export const objective = sqliteTable(
       .integer({ mode: "number" })
       .references(() => chapter.id, { onDelete: "set null" }),
     name: d.text({ length: 255 }).notNull(),
+    description: d.text(),
     trackingMode: d
       .text({ enum: ["BINARY", "PROGRESS_BAR"] })
       .default("BINARY")
