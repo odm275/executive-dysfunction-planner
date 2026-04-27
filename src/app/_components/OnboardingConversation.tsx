@@ -2,7 +2,23 @@
 
 import { useChat } from "ai/react";
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { api } from "~/trpc/react";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge, type badgeVariants } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import type { VariantProps } from "class-variance-authority";
 
 type ProposedObjective = {
   name: string;
@@ -26,11 +42,14 @@ type QuestProposal = {
 type EditableObjective = ProposedObjective & { accepted: boolean };
 type EditableChapter = ProposedChapter & { accepted: boolean };
 
-const DIFFICULTY_COLOURS: Record<string, string> = {
-  EASY: "bg-green-500/20 text-green-300 border border-green-500/30",
-  MEDIUM: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-  HARD: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
-  LEGENDARY: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
+const DIFFICULTY_VARIANTS: Record<
+  string,
+  VariantProps<typeof badgeVariants>["variant"]
+> = {
+  EASY: "easy",
+  MEDIUM: "medium",
+  HARD: "hard",
+  LEGENDARY: "legendary",
 };
 
 /** Try to extract a JSON block from the last assistant message. */
@@ -86,185 +105,187 @@ function ProposalReview({
       data-testid="proposal-review"
       className="space-y-5"
     >
-      <div>
-        <p className="mb-3 text-sm font-semibold text-[hsl(280,100%,70%)]">
-          Here&apos;s your quest plan — accept, edit, or reject each piece:
-        </p>
+      <p className="text-sm font-semibold text-primary">
+        Here&apos;s your quest plan — accept, edit, or reject each piece:
+      </p>
 
-        {/* Quest name */}
-        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3">
-          <label className="mb-1 block text-xs text-white/40">Quest name</label>
-          <input
-            data-testid="proposal-quest-name"
-            value={questName}
-            onChange={(e) => setQuestName(e.target.value)}
-            className="w-full rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 outline-none focus:border-white/40"
-          />
+      {/* Quest name */}
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Quest name</Label>
+            <Input
+              data-testid="proposal-quest-name"
+              value={questName}
+              onChange={(e) => setQuestName(e.target.value)}
+            />
+          </div>
 
-          <label className="mb-1 mt-2 block text-xs text-white/40">
-            Description (optional)
-          </label>
-          <input
-            data-testid="proposal-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 outline-none focus:border-white/40"
-          />
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">
+              Description (optional)
+            </Label>
+            <Input
+              data-testid="proposal-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
 
-          <label
+          <Label
             data-testid="proposal-side-quest-label"
-            className="mt-2 flex cursor-pointer items-center gap-2"
+            className="flex cursor-pointer items-center gap-2"
           >
-            <input
-              type="checkbox"
+            <Checkbox
               data-testid="proposal-side-quest-toggle"
               checked={isSideQuest}
-              onChange={(e) => setIsSideQuest(e.target.checked)}
-              className="h-4 w-4 accent-cyan-400"
+              onCheckedChange={(checked) => setIsSideQuest(Boolean(checked))}
             />
-            <span className="text-xs text-white/50">Side Quest</span>
-          </label>
-        </div>
+            <span className="text-xs text-muted-foreground">Side Quest</span>
+          </Label>
+        </CardContent>
+      </Card>
 
-        {/* Chapters */}
-        {chapters.length > 0 && (
-          <div className="mb-3">
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
-              Chapters
-            </p>
-            <div className="space-y-1.5">
-              {chapters.map((ch, i) => (
-                <div
-                  key={i}
-                  data-testid={`proposal-chapter-${i}`}
-                  className={`flex items-center gap-2 rounded-lg border p-2 ${
-                    ch.accepted
-                      ? "border-white/10 bg-white/5"
-                      : "border-white/5 bg-white/2 opacity-40"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    data-testid={`proposal-chapter-accept-${i}`}
-                    checked={ch.accepted}
-                    onChange={(e) =>
-                      setChapters((prev) =>
-                        prev.map((c, j) =>
-                          j === i ? { ...c, accepted: e.target.checked } : c,
-                        ),
-                      )
-                    }
-                    className="h-4 w-4 accent-[hsl(280,100%,70%)]"
-                  />
-                  <input
-                    value={ch.name}
-                    onChange={(e) =>
-                      setChapters((prev) =>
-                        prev.map((c, j) =>
-                          j === i ? { ...c, name: e.target.value } : c,
-                        ),
-                      )
-                    }
-                    className="flex-1 rounded border-none bg-transparent text-sm text-white/80 outline-none focus:bg-white/10 focus:px-2"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Objectives */}
+      {/* Chapters */}
+      {chapters.length > 0 && (
         <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-white/40">
-            Objectives ({acceptedObjectives.length} of {objectives.length} accepted)
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Chapters
           </p>
           <div className="space-y-1.5">
-            {objectives.map((obj, i) => (
+            {chapters.map((ch, i) => (
               <div
                 key={i}
-                data-testid={`proposal-objective-${i}`}
-                className={`flex items-start gap-2 rounded-lg border p-2 ${
-                  obj.accepted
-                    ? "border-white/10 bg-white/5"
-                    : "border-white/5 opacity-40"
+                data-testid={`proposal-chapter-${i}`}
+                className={`flex items-center gap-2 rounded-lg border p-2 ${
+                  ch.accepted ? "border-border bg-muted/20" : "border-border/30 opacity-40"
                 }`}
               >
-                <input
-                  type="checkbox"
-                  data-testid={`proposal-objective-accept-${i}`}
-                  checked={obj.accepted}
-                  onChange={(e) =>
-                    setObjectives((prev) =>
-                      prev.map((o, j) =>
-                        j === i ? { ...o, accepted: e.target.checked } : o,
+                <Checkbox
+                  data-testid={`proposal-chapter-accept-${i}`}
+                  checked={ch.accepted}
+                  onCheckedChange={(checked) =>
+                    setChapters((prev) =>
+                      prev.map((c, j) =>
+                        j === i ? { ...c, accepted: Boolean(checked) } : c,
                       ),
                     )
                   }
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(280,100%,70%)]"
                 />
-                <div className="flex-1 min-w-0">
-                  <input
-                    data-testid={`proposal-objective-name-${i}`}
-                    value={obj.name}
-                    onChange={(e) =>
-                      setObjectives((prev) =>
-                        prev.map((o, j) =>
-                          j === i ? { ...o, name: e.target.value } : o,
-                        ),
-                      )
-                    }
-                    className="w-full rounded border-none bg-transparent text-sm text-white/80 outline-none focus:bg-white/10 focus:px-1"
-                  />
-                  <div className="mt-1 flex items-center gap-2">
-                    <select
-                      data-testid={`proposal-objective-difficulty-${i}`}
-                      value={obj.difficulty}
-                      onChange={(e) =>
-                        setObjectives((prev) =>
-                          prev.map((o, j) =>
-                            j === i
-                              ? { ...o, difficulty: e.target.value as ProposedObjective["difficulty"] }
-                              : o,
-                          ),
-                        )
-                      }
-                      className={`rounded border-none px-1.5 py-0.5 text-xs outline-none ${DIFFICULTY_COLOURS[obj.difficulty]}`}
-                    >
-                      <option value="EASY">Easy</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HARD">Hard</option>
-                      <option value="LEGENDARY">Legendary</option>
-                    </select>
-                    {obj.chapterName && (
-                      <span className="text-xs text-white/30">
-                        in {obj.chapterName}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <Input
+                  value={ch.name}
+                  onChange={(e) =>
+                    setChapters((prev) =>
+                      prev.map((c, j) =>
+                        j === i ? { ...c, name: e.target.value } : c,
+                      ),
+                    )
+                  }
+                  className="flex-1 h-7 border-none bg-transparent text-sm shadow-none focus-visible:ring-0"
+                />
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Objectives */}
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Objectives ({acceptedObjectives.length} of {objectives.length} accepted)
+        </p>
+        <div className="space-y-1.5">
+          {objectives.map((obj, i) => (
+            <div
+              key={i}
+              data-testid={`proposal-objective-${i}`}
+              className={`flex items-start gap-2 rounded-lg border p-2 ${
+                obj.accepted ? "border-border bg-muted/20" : "border-border/30 opacity-40"
+              }`}
+            >
+              <Checkbox
+                data-testid={`proposal-objective-accept-${i}`}
+                checked={obj.accepted}
+                onCheckedChange={(checked) =>
+                  setObjectives((prev) =>
+                    prev.map((o, j) =>
+                      j === i ? { ...o, accepted: Boolean(checked) } : o,
+                    ),
+                  )
+                }
+                className="mt-0.5 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <Input
+                  data-testid={`proposal-objective-name-${i}`}
+                  value={obj.name}
+                  onChange={(e) =>
+                    setObjectives((prev) =>
+                      prev.map((o, j) =>
+                        j === i ? { ...o, name: e.target.value } : o,
+                      ),
+                    )
+                  }
+                  className="h-7 border-none bg-transparent text-sm shadow-none focus-visible:ring-0"
+                />
+                <div className="mt-1 flex items-center gap-2">
+                  <Select
+                    value={obj.difficulty}
+                    onValueChange={(value) =>
+                      setObjectives((prev) =>
+                        prev.map((o, j) =>
+                          j === i
+                            ? { ...o, difficulty: value as ProposedObjective["difficulty"] }
+                            : o,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      data-testid={`proposal-objective-difficulty-${i}`}
+                      size="sm"
+                      className="h-6 w-auto border-none shadow-none"
+                    >
+                      <Badge variant={DIFFICULTY_VARIANTS[obj.difficulty]}>
+                        <SelectValue />
+                      </Badge>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EASY">Easy</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="HARD">Hard</SelectItem>
+                      <SelectItem value="LEGENDARY">Legendary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {obj.chapterName && (
+                    <span className="text-xs text-muted-foreground">
+                      in {obj.chapterName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button
+        <Button
+          variant="outline"
           data-testid="proposal-restart"
           onClick={onRestart}
-          className="rounded border border-white/20 px-4 py-2 text-sm text-white/50 hover:text-white/70"
         >
           Start over
-        </button>
-        <button
+        </Button>
+        <Button
           data-testid="proposal-confirm"
           onClick={handleConfirm}
           disabled={!questName.trim() || acceptedObjectives.length === 0}
-          className="flex-1 rounded bg-[hsl(280,100%,70%)]/20 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
+          className="flex-1"
         >
           Create Quest ✨
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -306,7 +327,6 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
         isSideQuest: finalProposal.isSideQuest,
       });
 
-      // Create chapters
       const chapterIdMap: Record<string, number> = {};
       for (const ch of finalProposal.chapters) {
         const created = await createChapter.mutateAsync({
@@ -316,7 +336,6 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
         chapterIdMap[ch.name] = created.id;
       }
 
-      // Create objectives
       for (const obj of finalProposal.objectives) {
         await createObjective.mutateAsync({
           questId: q.id,
@@ -336,20 +355,19 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
     }
   }
 
-  // Start the conversation automatically
   const started = typeof window !== "undefined" && messages.length === 0;
 
   return (
     <div
       data-testid="onboarding-conversation"
-      className="flex min-h-screen flex-col bg-gradient-to-b from-[#1a0533] to-[#0a0d1a] text-white"
+      className="flex min-h-screen flex-col bg-background text-foreground"
     >
       {/* Header */}
       <div className="px-6 py-8 text-center">
-        <h1 className="text-2xl font-extrabold text-white">
+        <h1 className="text-2xl font-extrabold">
           Welcome, Adventurer
         </h1>
-        <p className="mt-2 text-sm text-white/50">
+        <p className="mt-2 text-sm text-muted-foreground">
           Let&apos;s set up your first quest.
         </p>
       </div>
@@ -359,14 +377,14 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
         {phase === "review" || phase === "confirming" ? (
           <div className="mx-auto max-w-md">
             {confirmError && (
-              <p className="mb-3 rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
-                {confirmError}
-              </p>
+              <Alert variant="destructive" className="mb-3">
+                <AlertDescription>{confirmError}</AlertDescription>
+              </Alert>
             )}
             {phase === "confirming" ? (
               <div className="flex items-center justify-center gap-3 py-12">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                <span className="text-white/50">Creating your quest…</span>
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Creating your quest…</span>
               </div>
             ) : (
               proposal && (
@@ -384,17 +402,19 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
         ) : (
           <div className="mx-auto flex max-w-md flex-col gap-4">
             {/* Opening prompt */}
-            <div
+            <Card
               data-testid="onboarding-opening-prompt"
-              className="rounded-xl border border-[hsl(280,100%,70%)]/20 bg-[hsl(280,100%,70%)]/5 px-5 py-4 text-center"
+              className="text-center"
             >
-              <p className="text-lg font-semibold text-white">
-                What&apos;s weighing on you right now?
-              </p>
-              <p className="mt-1 text-xs text-white/40">
-                Brain-dump anything. I&apos;ll help you turn it into a quest.
-              </p>
-            </div>
+              <CardContent className="pt-4">
+                <p className="text-lg font-semibold">
+                  What&apos;s weighing on you right now?
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Brain-dump anything. I&apos;ll help you turn it into a quest.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Chat messages */}
             <div className="space-y-3">
@@ -406,8 +426,8 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
                     data-testid={`onboarding-msg-${m.role}`}
                     className={`rounded-lg px-4 py-3 text-sm ${
                       m.role === "assistant"
-                        ? "border border-[hsl(280,100%,70%)]/20 bg-[hsl(280,100%,70%)]/10 text-white/90"
-                        : "ml-6 bg-white/10 text-white/70"
+                        ? "bg-muted"
+                        : "ml-6 bg-muted/50"
                     }`}
                   >
                     {m.content}
@@ -416,8 +436,8 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
 
               {isLoading && (
                 <div className="flex items-center gap-2 px-1">
-                  <div className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/60" />
-                  <span className="text-xs text-white/30">Thinking…</span>
+                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Thinking…</span>
                 </div>
               )}
             </div>
@@ -431,7 +451,7 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
               }}
               className="flex gap-2"
             >
-              <input
+              <Input
                 data-testid="onboarding-chat-input"
                 value={input}
                 onChange={handleInputChange}
@@ -441,21 +461,21 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
                     : "Reply…"
                 }
                 autoFocus={started}
-                className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 placeholder-white/30 outline-none focus:border-[hsl(280,100%,70%)]/40"
               />
-              <button
+              <Button
                 type="submit"
                 data-testid="onboarding-chat-send"
                 disabled={isLoading || !input.trim()}
-                className="rounded-xl bg-[hsl(280,100%,70%)]/20 px-5 py-3 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
               >
                 →
-              </button>
+              </Button>
             </form>
 
             {/* Shortcut: "I'm done, propose a quest" */}
             {messages.length >= 2 && !isLoading && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 data-testid="onboarding-propose-btn"
                 onClick={() => {
                   void append({
@@ -464,10 +484,10 @@ export function OnboardingConversation({ onComplete }: { onComplete: () => void 
                       "That's everything. Please propose a structured quest now.",
                   });
                 }}
-                className="text-center text-xs text-white/30 hover:text-white/60"
+                className="text-xs text-muted-foreground"
               >
                 I&apos;m done — propose a quest →
-              </button>
+              </Button>
             )}
           </div>
         )}
