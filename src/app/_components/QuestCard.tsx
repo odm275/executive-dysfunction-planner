@@ -1,9 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { EditQuestForm } from "~/app/_components/EditQuestForm";
 import { QuestBuilderChat } from "~/app/_components/QuestBuilderChat";
+import { Badge, type badgeVariants } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Progress } from "~/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Separator } from "~/components/ui/separator";
+import type { VariantProps } from "class-variance-authority";
 
 type SubTask = {
   id: number;
@@ -54,11 +76,14 @@ const DIFFICULTY_LABELS: Record<Objective["difficulty"], string> = {
   LEGENDARY: "Legendary",
 };
 
-const DIFFICULTY_COLOURS: Record<Objective["difficulty"], string> = {
-  EASY: "bg-green-500/20 text-green-300 border border-green-500/30",
-  MEDIUM: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-  HARD: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
-  LEGENDARY: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
+const DIFFICULTY_VARIANTS: Record<
+  Objective["difficulty"],
+  VariantProps<typeof badgeVariants>["variant"]
+> = {
+  EASY: "easy",
+  MEDIUM: "medium",
+  HARD: "hard",
+  LEGENDARY: "legendary",
 };
 
 function progressPercent(objectives: Objective[]): number {
@@ -241,185 +266,187 @@ function ObjectiveDetail({
   return (
     <div
       data-testid={`objective-detail-${obj.id}`}
-      className="rounded-lg border border-white/10 bg-white/5 p-4"
+      className="rounded-lg border border-border bg-muted/30 p-4"
     >
       {/* Edit form */}
       {isEditing && (
         <div
           data-testid={`objective-edit-form-${obj.id}`}
-          className="mb-3 space-y-2 rounded-lg border border-white/15 bg-white/5 p-3"
+          className="mb-3 space-y-2 rounded-lg border border-border bg-muted/20 p-3"
         >
-          <div>
-            <label className="mb-0.5 block text-xs text-white/40">Name</label>
-            <input
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Name</Label>
+            <Input
               data-testid={`objective-edit-name-${obj.id}`}
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 outline-none focus:border-white/40"
             />
           </div>
-          <div>
-            <label className="mb-0.5 block text-xs text-white/40">Difficulty</label>
-            <select
-              data-testid={`objective-edit-difficulty-${obj.id}`}
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Difficulty</Label>
+            <Select
               value={editDifficulty}
-              onChange={(e) => setEditDifficulty(e.target.value as Objective["difficulty"])}
-              className="rounded border border-white/20 bg-[#0a0d1a] px-2 py-1 text-sm text-white/80 outline-none"
-            >
-              <option value="EASY">Easy</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HARD">Hard</option>
-              <option value="LEGENDARY">Legendary</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-0.5 block text-xs text-white/40">Chapter</label>
-            <select
-              data-testid={`objective-edit-chapter-${obj.id}`}
-              value={editChapterId ?? ""}
-              onChange={(e) =>
-                setEditChapterId(
-                  e.target.value === "" ? null : Number(e.target.value),
-                )
+              onValueChange={(value) =>
+                setEditDifficulty(value as Objective["difficulty"])
               }
-              className="rounded border border-white/20 bg-[#0a0d1a] px-2 py-1 text-sm text-white/80 outline-none"
             >
-              <option value="">No chapter</option>
-              {chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  {ch.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger data-testid={`objective-edit-difficulty-${obj.id}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EASY">Easy</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HARD">Hard</SelectItem>
+                <SelectItem value="LEGENDARY">Legendary</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Chapter</Label>
+            <Select
+              value={editChapterId?.toString() ?? ""}
+              onValueChange={(value) =>
+                setEditChapterId(value === "" ? null : Number(value))
+              }
+            >
+              <SelectTrigger data-testid={`objective-edit-chapter-${obj.id}`}>
+                <SelectValue placeholder="No chapter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No chapter</SelectItem>
+                {chapters.map((ch) => (
+                  <SelectItem key={ch.id} value={ch.id.toString()}>
+                    {ch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
               data-testid={`objective-edit-recruitable-${obj.id}`}
               checked={editIsRecruitable}
-              onChange={(e) => setEditIsRecruitable(e.target.checked)}
-              className="h-4 w-4 accent-cyan-400"
+              onCheckedChange={(checked) => setEditIsRecruitable(Boolean(checked))}
             />
-            <span className="text-xs text-white/60">Recruitable</span>
-          </label>
+            <span className="text-xs text-muted-foreground">Recruitable</span>
+          </Label>
           <div className="flex gap-2 pt-1">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               data-testid={`objective-edit-cancel-${obj.id}`}
               onClick={cancelEdit}
-              className="rounded border border-white/20 px-3 py-1.5 text-xs text-white/50 hover:text-white/70"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
               data-testid={`objective-edit-save-${obj.id}`}
               onClick={saveEdit}
               disabled={updateObjective.isPending || !editName.trim()}
-              className="rounded bg-[hsl(280,100%,70%)]/20 px-3 py-1.5 text-xs font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/30 disabled:opacity-40"
             >
               {updateObjective.isPending ? "Saving…" : "Save"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Header row */}
       <div className="mb-3 flex items-start justify-between gap-2">
-        <span className="font-semibold text-white/90">{obj.name}</span>
+        <span className="font-semibold">{obj.name}</span>
         <div className="flex shrink-0 items-center gap-2">
           {!isEditing && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               data-testid={`objective-edit-btn-${obj.id}`}
               onClick={enterEdit}
-              className="text-xs text-white/30 hover:text-white/60"
+              className="h-auto px-2 py-0.5 text-xs"
             >
               Edit
-            </button>
+            </Button>
           )}
-          <span
-            className={`rounded px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLOURS[obj.difficulty]}`}
-          >
+          <Badge variant={DIFFICULTY_VARIANTS[obj.difficulty]}>
             {DIFFICULTY_LABELS[obj.difficulty]}
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Attributes row */}
-      <div className="mb-3 flex flex-wrap gap-2 text-xs text-white/50">
+      <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span>Mode: {obj.trackingMode === "BINARY" ? "Binary" : "Progress Bar"}</span>
         {obj.isRecruitable && (
-          <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-cyan-300">
-            Recruitable
-          </span>
+          <Badge variant="secondary">Recruitable</Badge>
         )}
         {obj.isDebuffed && (
-          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-300">
-            ⚡ Emotionally Charged
-          </span>
+          <Badge variant="destructive">⚡ Emotionally Charged</Badge>
         )}
         {obj.isCompleted && (
-          <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-green-300">
-            ✓ Complete
-          </span>
+          <Badge variant="outline">✓ Complete</Badge>
         )}
       </div>
 
       {/* Debuff toggle — hidden for Side Quest objectives */}
       {!obj.isCompleted && !isSideQuest && (
         <div className="mb-3">
-          <button
+          <Button
+            variant={obj.isDebuffed ? "destructive" : "outline"}
+            size="sm"
             data-testid={`debuff-toggle-${obj.id}`}
             onClick={handleToggleDebuff}
             disabled={updateObjective.isPending}
-            className={`rounded px-2 py-1 text-xs font-medium transition ${
-              obj.isDebuffed
-                ? "border border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30"
-                : "border border-white/20 bg-white/5 text-white/50 hover:bg-white/10"
-            }`}
           >
             {obj.isDebuffed ? "⚡ Emotionally Charged — Remove tag" : "Tag as Emotionally Charged"}
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Complete button */}
       {!obj.isCompleted && (
         <div className="mb-3">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             data-testid={`complete-objective-btn-${obj.id}`}
             onClick={() => completeObjective.mutate({ id: obj.id })}
             disabled={completeObjective.isPending}
-            className="rounded border border-green-500/40 bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-300 hover:bg-green-500/30 disabled:opacity-40"
+            className="border-green-500/40 text-green-700 hover:bg-green-500/20 dark:text-green-300"
           >
-            {completeObjective.isPending ? "Completing…" : "✓ Mark Complete"}
-          </button>
+            {completeObjective.isPending ? (
+              <><Loader2 className="size-3 animate-spin" /> Completing…</>
+            ) : (
+              "✓ Mark Complete"
+            )}
+          </Button>
         </div>
       )}
 
       {/* Archive button */}
       <div className="mb-3">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           data-testid={`archive-objective-btn-${obj.id}`}
           onClick={() => archiveObjective.mutate({ id: obj.id })}
           disabled={archiveObjective.isPending}
-          className="rounded border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/40 hover:bg-white/10 hover:text-white/60 disabled:opacity-40"
+          className="text-muted-foreground"
         >
-          {archiveObjective.isPending ? "Archiving…" : "Archive"}
-        </button>
+          {archiveObjective.isPending ? (
+            <><Loader2 className="size-3 animate-spin" /> Archiving…</>
+          ) : (
+            "Archive"
+          )}
+        </Button>
       </div>
 
       {/* Progress bar for PROGRESS_BAR mode */}
       {obj.trackingMode === "PROGRESS_BAR" && !obj.isCompleted && (
         <div className="mb-3">
-          <div className="mb-1 flex justify-between text-xs text-white/40">
+          <div className="mb-1 flex justify-between text-xs text-muted-foreground">
             <span>Progress</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-[hsl(280,100%,70%)] transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          <Progress value={progress} className="w-full" />
         </div>
       )}
 
@@ -428,18 +455,10 @@ function ObjectiveDetail({
         <ul className="mb-3 space-y-1">
           {obj.subTasks.map((st) => (
             <li key={st.id} className="flex items-center gap-2 text-sm">
-              <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                  st.isCompleted
-                    ? "border-green-500 bg-green-500/30 text-green-300"
-                    : "border-white/20"
-                }`}
-              >
-                {st.isCompleted && "✓"}
-              </span>
+              <Checkbox checked={st.isCompleted} disabled />
               <span
                 className={
-                  st.isCompleted ? "text-white/40 line-through" : "text-white/70"
+                  st.isCompleted ? "text-muted-foreground line-through" : ""
                 }
               >
                 {st.name}
@@ -453,9 +472,9 @@ function ObjectiveDetail({
       {obj.isDebuffed && !isSideQuest && (
         <div
           data-testid={`counter-tools-section-${obj.id}`}
-          className="rounded-lg border border-red-500/20 bg-red-500/10 p-3"
+          className="rounded-lg border border-destructive/20 bg-destructive/5 p-3"
         >
-          <p className="mb-2 text-xs font-semibold text-red-300">Counter-tools</p>
+          <p className="mb-2 text-xs font-semibold text-destructive">Counter-tools</p>
 
           {/* Existing counter-tools */}
           {obj.counterTools.length > 0 && (
@@ -464,7 +483,7 @@ function ObjectiveDetail({
                 <li key={ct.id} className="flex items-center gap-2">
                   {editingId === ct.id ? (
                     <>
-                      <input
+                      <Input
                         data-testid={`counter-tool-edit-input-${ct.id}`}
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
@@ -472,53 +491,59 @@ function ObjectiveDetail({
                           if (e.key === "Enter") handleEditSave(ct.id);
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="flex-1 rounded border border-white/20 bg-white/10 px-2 py-0.5 text-sm text-white/90 outline-none focus:border-white/40"
+                        className="flex-1 h-7 text-sm"
                         autoFocus
                       />
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         data-testid={`counter-tool-save-${ct.id}`}
                         onClick={() => handleEditSave(ct.id)}
                         disabled={updateCounterTool.isPending}
-                        className="text-xs text-green-400 hover:text-green-300"
+                        className="text-green-700 dark:text-green-400"
                       >
                         Save
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setEditingId(null)}
-                        className="text-xs text-white/30 hover:text-white/60"
+                        className="text-muted-foreground"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </>
                   ) : (
                     <>
-                      <span className="text-red-400">→</span>
+                      <span className="text-destructive">→</span>
                       <span
                         data-testid={`counter-tool-name-${ct.id}`}
-                        className="flex-1 text-sm text-white/70"
+                        className="flex-1 text-sm"
                       >
                         {ct.name}
                       </span>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         data-testid={`counter-tool-edit-${ct.id}`}
                         onClick={() => {
                           setEditingId(ct.id);
                           setEditingName(ct.name);
                         }}
-                        className="text-xs text-white/30 hover:text-white/60"
+                        className="text-muted-foreground text-xs h-auto px-2 py-0.5"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         data-testid={`counter-tool-remove-${ct.id}`}
-                        onClick={() =>
-                          removeCounterTool.mutate({ id: ct.id })
-                        }
+                        onClick={() => removeCounterTool.mutate({ id: ct.id })}
                         disabled={removeCounterTool.isPending}
-                        className="text-xs text-red-400/60 hover:text-red-400"
+                        className="text-destructive/60 hover:text-destructive text-xs h-auto px-2 py-0.5"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </>
                   )}
                 </li>
@@ -532,22 +557,23 @@ function ObjectiveDetail({
             className="flex gap-2"
             data-testid={`counter-tool-add-form-${obj.id}`}
           >
-            <input
+            <Input
               ref={newToolInputRef}
               data-testid={`counter-tool-new-input-${obj.id}`}
               value={newToolName}
               onChange={(e) => setNewToolName(e.target.value)}
               placeholder="Add a counter-tool…"
-              className="flex-1 rounded border border-white/20 bg-white/10 px-2 py-1 text-sm text-white/90 placeholder-white/30 outline-none focus:border-red-500/40"
+              className="flex-1 h-7 text-sm"
             />
-            <button
+            <Button
               type="submit"
+              size="sm"
+              variant="destructive"
               data-testid={`counter-tool-add-btn-${obj.id}`}
               disabled={addCounterTool.isPending || !newToolName.trim()}
-              className="rounded border border-red-500/40 bg-red-500/20 px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-40"
             >
               Add
-            </button>
+            </Button>
           </form>
         </div>
       )}
@@ -556,9 +582,9 @@ function ObjectiveDetail({
       {obj.isRecruitable && (
         <div
           data-testid={`collaborators-section-${obj.id}`}
-          className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3"
+          className="rounded-lg border border-border bg-muted/20 p-3"
         >
-          <p className="mb-2 text-xs font-semibold text-cyan-300">Collaborators</p>
+          <p className="mb-2 text-xs font-semibold text-foreground">Collaborators</p>
 
           {/* Collaborator list */}
           {collaborators && collaborators.length > 0 && (
@@ -567,12 +593,12 @@ function ObjectiveDetail({
                 <li
                   key={c.id}
                   data-testid={`collaborator-item-${c.id}`}
-                  className="flex items-center gap-2 text-xs text-white/60"
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
                 >
-                  <span className="text-cyan-400">•</span>
+                  <span>•</span>
                   <span>{(c as { user?: { name?: string | null; email: string } }).user?.name ?? (c as { user?: { email: string } }).user?.email ?? "Party Member"}</span>
                   {c.contribution && (
-                    <span className="text-white/30">— {c.contribution}</span>
+                    <span className="text-muted-foreground/50">— {c.contribution}</span>
                   )}
                 </li>
               ))}
@@ -581,38 +607,44 @@ function ObjectiveDetail({
 
           {/* Invite link generator */}
           {!inviteLink ? (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               data-testid={`generate-invite-btn-${obj.id}`}
               onClick={() => generateInvite.mutate({ objectiveId: obj.id })}
               disabled={generateInvite.isPending}
-              className="text-xs text-cyan-400/70 hover:text-cyan-400"
+              className="text-xs h-auto px-2 py-0.5"
             >
               {generateInvite.isPending ? "Generating…" : "🔗 Generate invite link"}
-            </button>
+            </Button>
           ) : (
             <div className="space-y-1">
-              <p className="text-xs text-white/40">Share this link:</p>
+              <p className="text-xs text-muted-foreground">Share this link:</p>
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   data-testid={`invite-link-input-${obj.id}`}
                   value={inviteLink}
                   readOnly
-                  className="flex-1 truncate rounded border border-white/20 bg-white/5 px-2 py-1 text-xs text-white/60"
+                  className="flex-1 h-7 truncate text-xs"
                 />
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   data-testid={`copy-invite-btn-${obj.id}`}
                   onClick={() => void navigator.clipboard.writeText(inviteLink)}
-                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                  className="text-xs h-auto px-2 py-0.5"
                 >
                   Copy
-                </button>
+                </Button>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setInviteLink(null)}
-                className="text-xs text-white/20 hover:text-white/40"
+                className="text-xs h-auto px-2 py-0.5 text-muted-foreground/50"
               >
                 Reset
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -650,45 +682,54 @@ function ObjectiveRow({
 
   return (
     <li>
-      <button
-        data-testid={`objective-row-${obj.id}`}
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/5"
-        aria-expanded={expanded}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full ${
-              obj.isCompleted ? "bg-green-400" : "bg-white/20"
-            }`}
-          />
-          <span
-            className={`truncate text-sm ${
-              obj.isCompleted ? "text-white/40 line-through" : "text-white/80"
-            }`}
-          >
-            {obj.name}
-          </span>
-          {obj.isDebuffed && (
-            <span className="shrink-0 text-xs text-red-400" title="Emotionally Charged">
-              ⚡
+      <Collapsible open={expanded} onOpenChange={setExpanded}>
+        <CollapsibleTrigger
+          data-testid={`objective-row-${obj.id}`}
+          className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted/50"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${
+                obj.isCompleted ? "bg-green-400" : "bg-border"
+              }`}
+            />
+            <span
+              className={`truncate text-sm ${
+                obj.isCompleted ? "text-muted-foreground line-through" : ""
+              }`}
+            >
+              {obj.name}
             </span>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span
-            className={`rounded px-1.5 py-0.5 text-xs font-medium ${DIFFICULTY_COLOURS[obj.difficulty]}`}
-          >
-            {DIFFICULTY_LABELS[obj.difficulty]}
-          </span>
-          <span className="text-xs text-white/30">{expanded ? "▲" : "▼"}</span>
-        </div>
-      </button>
-      {expanded && (
-        <div className="mt-1 px-3 pb-2">
-          <ObjectiveDetail obj={obj} isSideQuest={isSideQuest} chapters={chapters} onRefresh={onRefresh} onCompleted={onCompleted} onEditingChange={onEditingChange} />
-        </div>
-      )}
+            {obj.isDebuffed && (
+              <span className="shrink-0 text-xs text-destructive" title="Emotionally Charged">
+                ⚡
+              </span>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge variant={DIFFICULTY_VARIANTS[obj.difficulty]}>
+              {DIFFICULTY_LABELS[obj.difficulty]}
+            </Badge>
+            {expanded ? (
+              <ChevronDown className="size-3 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="size-3 text-muted-foreground" />
+            )}
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-1 px-3 pb-2">
+            <ObjectiveDetail
+              obj={obj}
+              isSideQuest={isSideQuest}
+              chapters={chapters}
+              onRefresh={onRefresh}
+              onCompleted={onCompleted}
+              onEditingChange={onEditingChange}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </li>
   );
 }
@@ -718,40 +759,44 @@ function ChapterSection({
   const hasFocusedObjective =
     focusObjectiveId != null &&
     objectives.some((o) => o.id === focusObjectiveId);
-  const [collapsed, setCollapsed] = useState(!hasFocusedObjective);
+  const [open, setOpen] = useState(hasFocusedObjective);
 
   useEffect(() => {
-    if (hasFocusedObjective) setCollapsed(false);
+    if (hasFocusedObjective) setOpen(true);
   }, [hasFocusedObjective]);
 
   return (
     <div className="mb-2">
-      <button
-        data-testid={`chapter-toggle-${chapter.id}`}
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-white/40 hover:bg-white/5"
-        aria-expanded={!collapsed}
-      >
-        <span>{collapsed ? "▶" : "▼"}</span>
-        <span>{chapter.name}</span>
-        <span className="text-white/25">({objectives.length})</span>
-      </button>
-      {!collapsed && (
-        <ul className="mt-1 space-y-1">
-          {objectives.map((obj) => (
-            <ObjectiveRow
-              key={obj.id}
-              obj={obj}
-              isSideQuest={isSideQuest}
-              chapters={chapters}
-              autoExpand={focusObjectiveId === obj.id}
-              onRefresh={onRefresh}
-              onCompleted={onCompleted}
-              onEditingChange={onEditingChange}
-            />
-          ))}
-        </ul>
-      )}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger
+          data-testid={`chapter-toggle-${chapter.id}`}
+          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted/50"
+        >
+          {open ? (
+            <ChevronDown className="size-3" />
+          ) : (
+            <ChevronRight className="size-3" />
+          )}
+          <span>{chapter.name}</span>
+          <span className="text-muted-foreground/50">({objectives.length})</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul className="mt-1 space-y-1">
+            {objectives.map((obj) => (
+              <ObjectiveRow
+                key={obj.id}
+                obj={obj}
+                isSideQuest={isSideQuest}
+                chapters={chapters}
+                autoExpand={focusObjectiveId === obj.id}
+                onRefresh={onRefresh}
+                onCompleted={onCompleted}
+                onEditingChange={onEditingChange}
+              />
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -766,7 +811,7 @@ function ArchivedObjectivesDisclosure({
   questId: number;
   onRestored: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const utils = api.useUtils();
 
   const { data: archivedObjectives } = api.objective.listArchivedObjectives.useQuery(
@@ -787,42 +832,48 @@ function ArchivedObjectivesDisclosure({
   return (
     <div
       data-testid={`archived-objectives-disclosure-${questId}`}
-      className="mt-3 border-t border-white/5 px-3 pt-3"
+      className="mt-3 px-3 pt-3"
     >
-      <button
-        data-testid={`archived-objectives-toggle-${questId}`}
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1 text-xs text-white/25 hover:text-white/50"
-        aria-expanded={expanded}
-      >
-        <span>{expanded ? "▾" : "▸"}</span>
-        <span>{count} archived</span>
-      </button>
-
-      {expanded && (
-        <ul
-          data-testid={`archived-objectives-list-${questId}`}
-          className="mt-2 space-y-1.5"
+      <Separator className="mb-3" />
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger
+          data-testid={`archived-objectives-toggle-${questId}`}
+          className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground"
         >
-          {archivedObjectives?.map((obj) => (
-            <li
-              key={obj.id}
-              data-testid={`archived-objective-item-${obj.id}`}
-              className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/3 px-2 py-1.5"
-            >
-              <span className="truncate text-xs text-white/40">{obj.name}</span>
-              <button
-                data-testid={`restore-objective-btn-${obj.id}`}
-                onClick={() => restoreObjective.mutate({ id: obj.id })}
-                disabled={restoreObjective.isPending}
-                className="shrink-0 rounded border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/40 hover:bg-white/10 hover:text-white/70 disabled:opacity-40"
+          {open ? (
+            <ChevronDown className="size-3" />
+          ) : (
+            <ChevronRight className="size-3" />
+          )}
+          <span>{count} archived</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul
+            data-testid={`archived-objectives-list-${questId}`}
+            className="mt-2 space-y-1.5"
+          >
+            {archivedObjectives?.map((obj) => (
+              <li
+                key={obj.id}
+                data-testid={`archived-objective-item-${obj.id}`}
+                className="flex items-center justify-between gap-2 rounded border border-border/50 bg-muted/20 px-2 py-1.5"
               >
-                Restore
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <span className="truncate text-xs text-muted-foreground">{obj.name}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid={`restore-objective-btn-${obj.id}`}
+                  onClick={() => restoreObjective.mutate({ id: obj.id })}
+                  disabled={restoreObjective.isPending}
+                  className="shrink-0 h-auto px-2 py-0.5 text-xs"
+                >
+                  Restore
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -861,37 +912,44 @@ function QuickAddObjectiveForm({
     <form
       data-testid={`quick-add-objective-form-${questId}`}
       onSubmit={handleSubmit}
-      className="mt-3 flex items-center gap-2 border-t border-white/10 px-3 pt-3"
+      className="mt-3 flex items-center gap-2 px-3 pt-3"
     >
-      <input
+      <Separator className="hidden" />
+      <Input
         data-testid={`quick-add-objective-name-${questId}`}
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Quick-add an objective…"
         maxLength={255}
-        className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white/80 placeholder-white/25 outline-none focus:border-white/25"
+        className="flex-1 h-8 text-sm"
       />
-      <select
-        data-testid={`quick-add-objective-difficulty-${questId}`}
+      <Select
         value={difficulty}
-        onChange={(e) =>
-          setDifficulty(e.target.value as typeof difficulty)
-        }
-        className="rounded border border-white/10 bg-[#0a0d1a] px-2 py-1.5 text-xs text-white/60 outline-none"
+        onValueChange={(value) => setDifficulty(value as typeof difficulty)}
       >
-        <option value="EASY">Easy</option>
-        <option value="MEDIUM">Medium</option>
-        <option value="HARD">Hard</option>
-        <option value="LEGENDARY">Legendary</option>
-      </select>
-      <button
+        <SelectTrigger
+          data-testid={`quick-add-objective-difficulty-${questId}`}
+          className="w-auto"
+          size="sm"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="EASY">Easy</SelectItem>
+          <SelectItem value="MEDIUM">Medium</SelectItem>
+          <SelectItem value="HARD">Hard</SelectItem>
+          <SelectItem value="LEGENDARY">Legendary</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
         type="submit"
+        size="sm"
+        variant="outline"
         data-testid={`quick-add-objective-submit-${questId}`}
         disabled={createObjective.isPending || !name.trim()}
-        className="rounded border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 hover:bg-white/10 hover:text-white/80 disabled:opacity-40"
       >
-        {createObjective.isPending ? "…" : "Add"}
-      </button>
+        {createObjective.isPending ? <Loader2 className="size-3 animate-spin" /> : "Add"}
+      </Button>
     </form>
   );
 }
@@ -925,10 +983,8 @@ export function QuestCard({
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [showAddObjectivesChat, setShowAddObjectivesChat] = useState(false);
-  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
 
   function handleEditingChange(isEditing: boolean) {
-    setHasUnsavedEdits(isEditing);
     onUnsavedEditsChange?.(isEditing);
   }
 
@@ -946,165 +1002,159 @@ export function QuestCard({
   );
 
   return (
-    <div
+    <Card
       data-testid={`quest-card-${quest.id}`}
-      className={`rounded-xl border transition-all ${
-        quest.isSideQuest
-          ? "border-cyan-500/30 bg-gradient-to-br from-cyan-900/30 to-[#0a0d1a]"
-          : "border-white/10 bg-white/5"
-      }`}
+      className="overflow-visible"
     >
-      {/* Quest region header — tap to expand (not shown when alwaysExpanded inside drawer) */}
-      <button
-        data-testid={alwaysExpanded ? undefined : `quest-region-${quest.id}`}
-        onClick={alwaysExpanded ? undefined : () => setExpanded((v) => !v)}
-        className={`flex w-full items-start justify-between gap-3 p-4 text-left${
-          alwaysExpanded ? " cursor-default" : ""
-        }`}
-        aria-expanded={expanded}
-      >
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            {quest.isSideQuest && (
-              <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-xs font-medium text-cyan-300">
-                Side Quest
-              </span>
+      <Collapsible open={alwaysExpanded ? true : expanded} onOpenChange={alwaysExpanded ? undefined : setExpanded}>
+        {/* Quest region header */}
+        <CollapsibleTrigger
+          data-testid={alwaysExpanded ? undefined : `quest-region-${quest.id}`}
+          disabled={alwaysExpanded}
+          className="flex w-full items-start justify-between gap-3 p-4 text-left"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              {quest.isSideQuest && (
+                <Badge variant="secondary">Side Quest</Badge>
+              )}
+              <h3 className="truncate font-bold">{quest.name}</h3>
+            </div>
+            {quest.description && (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {quest.description}
+              </p>
             )}
-            <h3 className="truncate font-bold text-white">{quest.name}</h3>
           </div>
-          {quest.description && (
-            <p className="mt-0.5 truncate text-xs text-white/40">
-              {quest.description}
-            </p>
-          )}
+
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="text-sm font-semibold text-muted-foreground">{pct}%</span>
+            {!alwaysExpanded && (
+              expanded ? (
+                <ChevronDown className="size-3 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="size-3 text-muted-foreground" />
+              )
+            )}
+          </div>
+        </CollapsibleTrigger>
+
+        {/* Edit button — shown when expanded */}
+        {expanded && !showEditForm && (
+          <div className="px-4 pb-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid={`quest-edit-btn-${quest.id}`}
+              onClick={() => setShowEditForm(true)}
+              className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
+            >
+              Edit quest
+            </Button>
+          </div>
+        )}
+
+        {/* Progress bar */}
+        <div className="px-4 pb-3">
+          <Progress value={pct} className="w-full" />
+          <p className="mt-1 text-xs text-muted-foreground">
+            {quest.objectives.filter((o) => o.isCompleted).length} /{" "}
+            {quest.objectives.length} objectives complete
+          </p>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="text-sm font-semibold text-white/70">{pct}%</span>
-          {!alwaysExpanded && (
-            <span className="text-xs text-white/30">{expanded ? "▲" : "▼"}</span>
-          )}
-        </div>
-      </button>
-
-      {/* Edit button — shown when expanded */}
-      {expanded && !showEditForm && (
-        <div className="px-4 pb-1">
-          <button
-            data-testid={`quest-edit-btn-${quest.id}`}
-            onClick={() => setShowEditForm(true)}
-            className="text-xs text-white/30 hover:text-white/60"
-          >
-            Edit quest
-          </button>
-        </div>
-      )}
-
-      {/* Progress bar */}
-      <div className="px-4 pb-3">
-        <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
-          <div
-            className={`h-full rounded-full transition-all ${
-              quest.isSideQuest ? "bg-cyan-400" : "bg-[hsl(280,100%,70%)]"
-            }`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <p className="mt-1 text-xs text-white/30">
-          {quest.objectives.filter((o) => o.isCompleted).length} /{" "}
-          {quest.objectives.length} objectives complete
-        </p>
-      </div>
-
-      {/* Expanded content */}
-      {expanded && (
-        <div className="border-t border-white/10 px-2 py-3">
-          {/* Chapters */}
-          {quest.chapters.map((ch) => {
-            const chObjs = quest.objectives.filter(
-              (o) => o.chapterId === ch.id,
-            );
-            return (
-              <ChapterSection
-                key={ch.id}
-                chapter={ch}
-                objectives={chObjs}
-                isSideQuest={quest.isSideQuest}
-                chapters={quest.chapters}
-                focusObjectiveId={focusObjectiveId}
-                onRefresh={handleRefresh}
-                onCompleted={onObjectiveCompleted}
-                onEditingChange={handleEditingChange}
-              />
-            );
-          })}
-          {topLevelObjectives.length > 0 && (
-            <ul className="space-y-1">
-              {topLevelObjectives.map((obj) => (
-                <ObjectiveRow
-                  key={obj.id}
-                  obj={obj}
+        {/* Expanded content */}
+        <CollapsibleContent>
+          <div className="border-t border-border px-2 py-3">
+            {/* Chapters */}
+            {quest.chapters.map((ch) => {
+              const chObjs = quest.objectives.filter(
+                (o) => o.chapterId === ch.id,
+              );
+              return (
+                <ChapterSection
+                  key={ch.id}
+                  chapter={ch}
+                  objectives={chObjs}
                   isSideQuest={quest.isSideQuest}
                   chapters={quest.chapters}
-                  autoExpand={focusObjectiveId === obj.id}
+                  focusObjectiveId={focusObjectiveId}
                   onRefresh={handleRefresh}
                   onCompleted={onObjectiveCompleted}
                   onEditingChange={handleEditingChange}
                 />
-              ))}
-            </ul>
-          )}
+              );
+            })}
+            {topLevelObjectives.length > 0 && (
+              <ul className="space-y-1">
+                {topLevelObjectives.map((obj) => (
+                  <ObjectiveRow
+                    key={obj.id}
+                    obj={obj}
+                    isSideQuest={quest.isSideQuest}
+                    chapters={quest.chapters}
+                    autoExpand={focusObjectiveId === obj.id}
+                    onRefresh={handleRefresh}
+                    onCompleted={onObjectiveCompleted}
+                    onEditingChange={handleEditingChange}
+                  />
+                ))}
+              </ul>
+            )}
 
-          {quest.objectives.length === 0 && !showAddObjectivesChat && (
-            <div className="px-3 py-4 text-center">
-              <p className="mb-3 text-xs text-white/30">No objectives yet.</p>
-              <button
-                data-testid={`add-objectives-cta-${quest.id}`}
-                onClick={() => setShowAddObjectivesChat(true)}
-                className="rounded-lg border border-[hsl(280,100%,70%)]/30 bg-[hsl(280,100%,70%)]/10 px-4 py-2 text-sm font-medium text-[hsl(280,100%,70%)] hover:bg-[hsl(280,100%,70%)]/20"
-              >
-                ✨ Add objectives
-              </button>
-            </div>
-          )}
+            {quest.objectives.length === 0 && !showAddObjectivesChat && (
+              <div className="px-3 py-4 text-center">
+                <p className="mb-3 text-xs text-muted-foreground">No objectives yet.</p>
+                <Button
+                  variant="outline"
+                  data-testid={`add-objectives-cta-${quest.id}`}
+                  onClick={() => setShowAddObjectivesChat(true)}
+                >
+                  ✨ Add objectives
+                </Button>
+              </div>
+            )}
 
-          {quest.objectives.length > 0 && !showAddObjectivesChat && (
-            <div className="mt-2 px-3">
-              <button
-                data-testid={`add-more-objectives-link-${quest.id}`}
-                onClick={() => setShowAddObjectivesChat(true)}
-                className="text-xs text-white/30 hover:text-white/60"
-              >
-                + Add more objectives
-              </button>
-            </div>
-          )}
+            {quest.objectives.length > 0 && !showAddObjectivesChat && (
+              <div className="mt-2 px-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid={`add-more-objectives-link-${quest.id}`}
+                  onClick={() => setShowAddObjectivesChat(true)}
+                  className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
+                >
+                  + Add more objectives
+                </Button>
+              </div>
+            )}
 
-          {!showAddObjectivesChat && (
-            <ArchivedObjectivesDisclosure questId={quest.id} onRestored={handleRefresh} />
-          )}
+            {!showAddObjectivesChat && (
+              <ArchivedObjectivesDisclosure questId={quest.id} onRestored={handleRefresh} />
+            )}
 
-          {!showAddObjectivesChat && (
-            <QuickAddObjectiveForm questId={quest.id} onAdded={handleRefresh} />
-          )}
+            {!showAddObjectivesChat && (
+              <QuickAddObjectiveForm questId={quest.id} onAdded={handleRefresh} />
+            )}
 
-          {showAddObjectivesChat && (
-            <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
-              <QuestBuilderChat
-                mode="add-objectives"
-                questId={quest.id}
-                questName={quest.name}
-                existingObjectiveNames={quest.objectives.map((o) => o.name)}
-                onSuccess={() => {
-                  setShowAddObjectivesChat(false);
-                  handleRefresh();
-                }}
-                onCancel={() => setShowAddObjectivesChat(false)}
-              />
-            </div>
-          )}
-        </div>
-      )}
+            {showAddObjectivesChat && (
+              <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3">
+                <QuestBuilderChat
+                  mode="add-objectives"
+                  questId={quest.id}
+                  questName={quest.name}
+                  existingObjectiveNames={quest.objectives.map((o) => o.name)}
+                  onSuccess={() => {
+                    setShowAddObjectivesChat(false);
+                    handleRefresh();
+                  }}
+                  onCancel={() => setShowAddObjectivesChat(false)}
+                />
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Edit quest form */}
       {showEditForm && (
@@ -1117,6 +1167,6 @@ export function QuestCard({
           onCancel={() => setShowEditForm(false)}
         />
       )}
-    </div>
+    </Card>
   );
 }
