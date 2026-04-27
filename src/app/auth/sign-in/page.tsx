@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { authClient } from "~/server/better-auth/client";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -30,63 +35,66 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#1a0533] to-[#0a0d1a] text-white">
-      <div className="w-full max-w-sm px-6">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+      <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-extrabold tracking-tight">
             Executive Dysfunction{" "}
-            <span className="text-[hsl(280,100%,70%)]">Planner</span>
+            <span className="text-primary">Planner</span>
           </h1>
-          <p className="mt-2 text-sm text-white/60">
+          <p className="mt-2 text-sm text-muted-foreground">
             Your quest log awaits, Adventurer.
           </p>
         </div>
 
         {submitted ? (
-          <div className="rounded-xl bg-white/10 p-6 text-center">
-            <div className="mb-3 text-3xl">📬</div>
-            <h2 className="text-xl font-bold">Check your inbox</h2>
-            <p className="mt-2 text-sm text-white/70">
-              We sent a magic link to{" "}
-              <span className="font-medium text-white">{email}</span>.
-              Click it to sign in — no password needed.
-            </p>
-            <p className="mt-4 text-xs text-white/40">
-              (In development, the link is printed to the server console.)
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="email" className="text-sm font-medium text-white/80">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white placeholder-white/30 outline-none focus:border-[hsl(280,100%,70%)] focus:ring-1 focus:ring-[hsl(280,100%,70%)]"
-              />
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-red-500/20 px-4 py-2 text-sm text-red-300">
-                {error}
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="mb-3 text-3xl">📬</div>
+              <h2 className="text-xl font-bold">Check your inbox</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We sent a magic link to{" "}
+                <span className="font-medium text-foreground">{email}</span>.
+                Click it to sign in — no password needed.
               </p>
-            )}
+              <p className="mt-4 text-xs text-muted-foreground">
+                (In development, the link is printed to the server console.)
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                </div>
 
-            <button
-              type="submit"
-              disabled={loading || !email}
-              className="rounded-full bg-[hsl(280,100%,70%)] px-6 py-3 font-semibold text-white transition hover:bg-[hsl(280,100%,60%)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Sending…" : "Send magic link"}
-            </button>
-          </form>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading || !email}
+                  className="w-full"
+                >
+                  {loading ? "Sending…" : "Send magic link"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         )}
       </div>
     </main>
