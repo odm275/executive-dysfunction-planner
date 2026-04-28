@@ -2,7 +2,7 @@
 
 import { useChat } from "ai/react";
 import { useState } from "react";
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, RotateCcw, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -412,9 +412,11 @@ function ProposalReview({
         <Button
           variant="outline"
           data-testid="proposal-restart"
+          aria-label="Start over"
           onClick={onRestart}
         >
-          Start over
+          <RotateCcw className="size-3" />
+          Restart
         </Button>
         <Button
           data-testid="proposal-confirm"
@@ -532,9 +534,11 @@ function AddObjectivesProposalReview({
         <Button
           variant="outline"
           data-testid="proposal-restart"
+          aria-label="Start over"
           onClick={onRestart}
         >
-          Start over
+          <RotateCcw className="size-3" />
+          Restart
         </Button>
         <Button
           data-testid="proposal-confirm"
@@ -708,10 +712,12 @@ export function QuestBuilderChat(props: QuestBuilderChatProps) {
           variant="outline"
           size="sm"
           data-testid="quest-builder-discard"
+          aria-label="Cancel quest builder"
           onClick={onCancel}
           className="text-xs"
         >
-          ✕ Cancel
+          <X className="size-3" />
+          Cancel
         </Button>
       </div>
 

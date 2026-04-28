@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
+import { Archive, Check, ChevronDown, ChevronRight, Link, Loader2, Pencil, Plus, Trash2, Undo2, X, Zap, ZapOff } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ChapterManager } from "~/app/_components/ChapterManager";
 import { EditQuestForm } from "~/app/_components/EditQuestForm";
@@ -354,17 +354,24 @@ function ObjectiveDetail({
               variant="outline"
               size="sm"
               data-testid={`objective-edit-cancel-${obj.id}`}
+              aria-label="Cancel editing objective"
               onClick={cancelEdit}
             >
+              <X className="size-3" />
               Cancel
             </Button>
             <Button
               size="sm"
               data-testid={`objective-edit-save-${obj.id}`}
+              aria-label="Save objective changes"
               onClick={saveEdit}
               disabled={updateObjective.isPending || !editName.trim()}
             >
-              {updateObjective.isPending ? "Saving…" : "Save"}
+              {updateObjective.isPending ? (
+                <><Loader2 className="size-3 animate-spin" /> Saving…</>
+              ) : (
+                <><Check className="size-3" /> Save</>
+              )}
             </Button>
           </div>
         </div>
@@ -379,9 +386,11 @@ function ObjectiveDetail({
               variant="ghost"
               size="sm"
               data-testid={`objective-edit-btn-${obj.id}`}
+              aria-label="Edit objective"
               onClick={enterEdit}
               className="h-auto px-2 py-0.5 text-xs"
             >
+              <Pencil className="size-3" />
               Edit
             </Button>
           )}
@@ -439,10 +448,15 @@ function ObjectiveDetail({
             variant={obj.isDebuffed ? "destructive" : "outline"}
             size="sm"
             data-testid={`debuff-toggle-${obj.id}`}
+            aria-label={obj.isDebuffed ? "Remove Emotionally Charged tag" : "Tag as Emotionally Charged"}
             onClick={handleToggleDebuff}
             disabled={updateObjective.isPending}
           >
-            {obj.isDebuffed ? "⚡ Emotionally Charged — Remove tag" : "Tag as Emotionally Charged"}
+            {obj.isDebuffed ? (
+              <><ZapOff className="size-3" /> Remove</>
+            ) : (
+              <><Zap className="size-3" /> Tag</>
+            )}
           </Button>
         </div>
       )}
@@ -454,6 +468,7 @@ function ObjectiveDetail({
             variant="outline"
             size="sm"
             data-testid={`complete-objective-btn-${obj.id}`}
+            aria-label="Mark objective complete"
             onClick={() => completeObjective.mutate({ id: obj.id })}
             disabled={completeObjective.isPending}
             className="border-green-500/40 text-green-700 hover:bg-green-500/20 dark:text-green-300"
@@ -461,7 +476,7 @@ function ObjectiveDetail({
             {completeObjective.isPending ? (
               <><Loader2 className="size-3 animate-spin" /> Completing…</>
             ) : (
-              "✓ Mark Complete"
+              <><Check className="size-3" /> Complete</>
             )}
           </Button>
         </div>
@@ -473,6 +488,7 @@ function ObjectiveDetail({
           variant="ghost"
           size="sm"
           data-testid={`archive-objective-btn-${obj.id}`}
+          aria-label="Archive objective"
           onClick={() => archiveObjective.mutate({ id: obj.id })}
           disabled={archiveObjective.isPending}
           className="text-muted-foreground"
@@ -480,7 +496,7 @@ function ObjectiveDetail({
           {archiveObjective.isPending ? (
             <><Loader2 className="size-3 animate-spin" /> Archiving…</>
           ) : (
-            "Archive"
+            <><Archive className="size-3" /> Archive</>
           )}
         </Button>
       </div>
@@ -544,18 +560,22 @@ function ObjectiveDetail({
                         variant="ghost"
                         size="sm"
                         data-testid={`counter-tool-save-${ct.id}`}
+                        aria-label="Save counter-tool name"
                         onClick={() => handleEditSave(ct.id)}
                         disabled={updateCounterTool.isPending}
                         className="text-green-700 dark:text-green-400"
                       >
+                        <Check className="size-3" />
                         Save
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Cancel editing counter-tool"
                         onClick={() => setEditingId(null)}
                         className="text-muted-foreground"
                       >
+                        <X className="size-3" />
                         Cancel
                       </Button>
                     </>
@@ -572,22 +592,26 @@ function ObjectiveDetail({
                         variant="ghost"
                         size="sm"
                         data-testid={`counter-tool-edit-${ct.id}`}
+                        aria-label="Edit counter-tool"
                         onClick={() => {
                           setEditingId(ct.id);
                           setEditingName(ct.name);
                         }}
                         className="text-muted-foreground text-xs h-auto px-2 py-0.5"
                       >
+                        <Pencil className="size-3" />
                         Edit
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         data-testid={`counter-tool-remove-${ct.id}`}
+                        aria-label="Remove counter-tool"
                         onClick={() => removeCounterTool.mutate({ id: ct.id })}
                         disabled={removeCounterTool.isPending}
                         className="text-destructive/60 hover:text-destructive text-xs h-auto px-2 py-0.5"
                       >
+                        <Trash2 className="size-3" />
                         Remove
                       </Button>
                     </>
@@ -657,11 +681,16 @@ function ObjectiveDetail({
               variant="ghost"
               size="sm"
               data-testid={`generate-invite-btn-${obj.id}`}
+              aria-label="Generate invite link for this objective"
               onClick={() => generateInvite.mutate({ objectiveId: obj.id })}
               disabled={generateInvite.isPending}
               className="text-xs h-auto px-2 py-0.5"
             >
-              {generateInvite.isPending ? "Generating…" : "🔗 Generate invite link"}
+              {generateInvite.isPending ? (
+                <><Loader2 className="size-3 animate-spin" /> Generating…</>
+              ) : (
+                <><Link className="size-3" /> Invite</>
+              )}
             </Button>
           ) : (
             <div className="space-y-1">
@@ -916,20 +945,24 @@ function ArchivedObjectivesDisclosure({
                     variant="outline"
                     size="sm"
                     data-testid={`restore-objective-btn-${obj.id}`}
+                    aria-label="Restore archived objective"
                     onClick={() => restoreObjective.mutate({ id: obj.id })}
                     disabled={restoreObjective.isPending}
                     className="h-auto px-2 py-0.5 text-xs"
                   >
+                    <Undo2 className="size-3" />
                     Restore
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     data-testid={`delete-archived-objective-btn-${obj.id}`}
+                    aria-label="Permanently delete archived objective"
                     onClick={() => deleteObjective.mutate({ id: obj.id })}
                     disabled={deleteObjective.isPending}
                     className="h-auto px-2 py-0.5 text-xs text-destructive/60 hover:text-destructive"
                   >
+                    <Trash2 className="size-3" />
                     Delete
                   </Button>
                 </div>
@@ -1117,15 +1150,18 @@ export function QuestCard({
               variant="ghost"
               size="sm"
               data-testid={`quest-edit-btn-${quest.id}`}
+              aria-label="Edit quest"
               onClick={() => setShowEditForm(true)}
               className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
             >
-              Edit quest
+              <Pencil className="size-3" />
+              Edit
             </Button>
             <Button
               variant="ghost"
               size="sm"
               data-testid={`quest-archive-btn-${quest.id}`}
+              aria-label="Archive quest"
               onClick={() => archiveQuest.mutate({ id: quest.id })}
               disabled={archiveQuest.isPending}
               className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
@@ -1133,7 +1169,7 @@ export function QuestCard({
               {archiveQuest.isPending ? (
                 <><Loader2 className="size-3 animate-spin" /> Archiving…</>
               ) : (
-                "🗄️ Archive quest"
+                <><Archive className="size-3" /> Archive</>
               )}
             </Button>
           </div>
@@ -1209,10 +1245,12 @@ export function QuestCard({
                   variant="ghost"
                   size="sm"
                   data-testid={`add-more-objectives-link-${quest.id}`}
+                  aria-label="Add more objectives"
                   onClick={() => setShowAddObjectivesChat(true)}
                   className="h-auto px-2 py-0.5 text-xs text-muted-foreground"
                 >
-                  + Add more objectives
+                  <Plus className="size-3" />
+                  Add
                 </Button>
               </div>
             )}
