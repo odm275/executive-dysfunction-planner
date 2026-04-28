@@ -1,7 +1,22 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, GripVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -18,7 +33,7 @@ interface ChapterManagerProps {
 }
 
 // ---------------------------------------------------------------------------
-// ChapterRow — renders one chapter with inline rename + delete-confirm flows
+// ChapterRow — renders one chapter with drag handle, rename, and delete flows
 // ---------------------------------------------------------------------------
 function ChapterRow({
   chapter,
@@ -27,6 +42,21 @@ function ChapterRow({
   chapter: Chapter;
   onMutated: () => void;
 }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: chapter.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   // ── Rename state ──────────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(chapter.name);
@@ -105,7 +135,7 @@ function ChapterRow({
   // ── Inline rename form ───────────────────────────────────────────────────
   if (isEditing) {
     return (
-      <div className="flex flex-col gap-1">
+      <div ref={setNodeRef} style={style} className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
           <Input
             ref={renameInputRef}
@@ -141,7 +171,6 @@ function ChapterRow({
             data-testid={`chapter-rename-cancel-btn-${chapter.id}`}
             aria-label="Cancel renaming chapter"
             onMouseDown={(e) => {
-              // Prevent blur from firing before click
               e.preventDefault();
             }}
             onClick={cancelEdit}
@@ -167,7 +196,7 @@ function ChapterRow({
   // ── Inline delete confirmation ────────────────────────────────────────────
   if (showDeleteConfirm) {
     return (
-      <div className="flex flex-col gap-1">
+      <div ref={setNodeRef} style={style} className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5 rounded bg-destructive/10 px-2 py-1">
           <p
             className="flex-1 text-xs text-destructive"
@@ -218,7 +247,16 @@ function ChapterRow({
 
   // ── Default row view ──────────────────────────────────────────────────────
   return (
-    <div className="flex items-center gap-1.5">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1.5">
+      <span
+        data-testid={`chapter-drag-handle-${chapter.id}`}
+        aria-label="Drag to reorder chapter"
+        className="cursor-grab text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3" />
+      </span>
       <button
         data-testid={`chapter-name-label-${chapter.id}`}
         onClick={startEdit}
@@ -254,10 +292,31 @@ function ChapterRow({
 }
 
 // ---------------------------------------------------------------------------
-// ChapterManager — create flow + chapter rows
+// ChapterManager — drag-and-drop reorder + create + chapter rows
 // ---------------------------------------------------------------------------
 export function ChapterManager({ questId, chapters }: ChapterManagerProps) {
   const utils = api.useUtils();
+
+  // ── Drag-and-drop ──────────────────────────────────────────────────────────
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const reorderChapters = api.chapter.reorderChapters.useMutation({
+    onSuccess: () => {
+      void utils.quest.listActiveQuests.invalidate();
+    },
+  });
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = chapters.findIndex((c) => c.id === active.id);
+    const newIndex = chapters.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(chapters, oldIndex, newIndex);
+    reorderChapters.mutate({ orderedIds: reordered.map((c) => c.id) });
+  }
 
   // ── Create flow state ──────────────────────────────────────────────────────
   const [showAddForm, setShowAddForm] = useState(false);
@@ -310,13 +369,31 @@ export function ChapterManager({ questId, chapters }: ChapterManagerProps) {
       className="mb-3 px-2"
       data-testid={`chapter-manager-${questId}`}
     >
-      {/* Existing chapter rows */}
+      {/* Sortable chapter rows */}
       {chapters.length > 0 && (
-        <div className="mb-2 space-y-1">
-          {chapters.map((ch) => (
-            <ChapterRow key={ch.id} chapter={ch} onMutated={handleMutated} />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={chapters.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="mb-2 space-y-1">
+              {chapters.map((ch) => (
+                <ChapterRow key={ch.id} chapter={ch} onMutated={handleMutated} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {/* Reorder error */}
+      {reorderChapters.isError && (
+        <p className="mb-1 text-xs text-destructive">
+          {reorderChapters.error.message ?? "Failed to reorder chapters. Please try again."}
+        </p>
       )}
 
       {/* Add chapter form */}
