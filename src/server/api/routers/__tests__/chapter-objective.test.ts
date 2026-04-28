@@ -141,6 +141,52 @@ describe("Chapter Engine — deleteChapter", () => {
     });
     expect(found).toBeUndefined();
   });
+
+  it("throws when chapter belongs to another user", async () => {
+    await insertUser(db, "udc2a");
+    await insertUser(db, "udc2b");
+    const q = await createQuestForUser(db, "udc2a");
+    const ch = await createChapterFn(db, "udc2a", { questId: q.id, name: "Mine" });
+
+    await expect(deleteChapterFn(db, "udc2b", ch.id)).rejects.toThrow(
+      "Chapter not found.",
+    );
+  });
+
+  it("succeeds when chapter has no objectives", async () => {
+    await insertUser(db, "udc3");
+    const q = await createQuestForUser(db, "udc3");
+    const ch = await createChapterFn(db, "udc3", { questId: q.id, name: "Empty" });
+
+    await expect(deleteChapterFn(db, "udc3", ch.id)).resolves.toEqual({
+      id: ch.id,
+    });
+  });
+
+  it("leaves objectives in other chapters unaffected", async () => {
+    await insertUser(db, "udc4");
+    const q = await createQuestForUser(db, "udc4");
+    const ch1 = await createChapterFn(db, "udc4", { questId: q.id, name: "To Delete" });
+    const ch2 = await createChapterFn(db, "udc4", { questId: q.id, name: "Keep" });
+    await createObjectiveFn(db, "udc4", {
+      questId: q.id,
+      chapterId: ch1.id,
+      name: "Deleted child",
+    });
+    const kept = await createObjectiveFn(db, "udc4", {
+      questId: q.id,
+      chapterId: ch2.id,
+      name: "Survivor",
+    });
+
+    await deleteChapterFn(db, "udc4", ch1.id);
+
+    const found = await db.query.objective.findFirst({
+      where: eq(objective.id, kept.id),
+    });
+    expect(found).toBeDefined();
+    expect(found!.chapterId).toBe(ch2.id);
+  });
 });
 
 describe("Chapter Engine — reorderChapters", () => {

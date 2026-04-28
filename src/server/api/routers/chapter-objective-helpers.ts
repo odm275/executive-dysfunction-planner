@@ -111,6 +111,7 @@ export async function deleteChapterFn(
   const owned = await getOwnedChapter(db, chapterId, userId);
   if (!owned) throw new Error("Chapter not found.");
 
+  await db.delete(objective).where(eq(objective.chapterId, chapterId));
   await db.delete(chapter).where(eq(chapter.id, chapterId));
   return { id: chapterId };
 }
