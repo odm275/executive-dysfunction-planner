@@ -14,6 +14,7 @@ import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
 import { ReminderPreferences } from "~/app/_components/ReminderPreferences";
 import { ArchivedQuestsSheet } from "~/app/_components/ArchivedQuestsSheet";
 import { Button } from "~/components/ui/button";
+import { ThemeToggle } from "~/components/ui/theme-toggle";
 import {
   Dialog,
   DialogContent,
@@ -343,6 +344,7 @@ export function WorldMapClient() {
             🔔
           </Button>
           <UpdateEnergyButton currentEnergy={energy} />
+          <ThemeToggle />
         </div>
       </header>
 

@@ -31,6 +31,12 @@ const ENERGY_OPTIONS: EnergyOption[] = [
   },
 ];
 
+const ENERGY_EMOJI: Record<EnergyLevel, string> = {
+  LOW: "🌱",
+  MEDIUM: "☀️",
+  HIGH: "🔥",
+};
+
 interface EnergyCheckInProps {
   onComplete: () => void;
 }
@@ -49,15 +55,21 @@ export function EnergyCheckIn({ onComplete }: EnergyCheckInProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-8">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center">
+          <div className="mb-2 text-4xl" aria-hidden>
+            ✨
+          </div>
+          <p className="text-sm text-muted-foreground">A gentle check-in before you begin</p>
+        </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold tracking-tight">
+            <CardTitle className="text-center font-heading text-2xl font-semibold tracking-tight">
               How&apos;s your energy today?
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="flex flex-col gap-3">
             {ENERGY_OPTIONS.map((option) => (
               <Button
                 key={option.value}
@@ -65,11 +77,16 @@ export function EnergyCheckIn({ onComplete }: EnergyCheckInProps) {
                 onClick={() => handleSelect(option.value)}
                 disabled={setEnergy.isPending}
                 aria-label={option.label}
-                className="flex h-auto w-full items-center justify-between px-6 py-4 text-left"
+                className="flex h-auto w-full items-center justify-between rounded-2xl px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
               >
-                <div>
-                  <div className="text-lg font-semibold">{option.label}</div>
-                  <div className="text-sm text-muted-foreground">{option.description}</div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>
+                    {ENERGY_EMOJI[option.value]}
+                  </span>
+                  <div>
+                    <div className="text-base font-semibold">{option.label}</div>
+                    <div className="text-sm text-muted-foreground">{option.description}</div>
+                  </div>
                 </div>
                 {setEnergy.isPending && setEnergy.variables?.value === option.value && (
                   <Loader2 className="size-4 animate-spin" />

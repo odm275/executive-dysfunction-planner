@@ -19,10 +19,10 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
-        easy: "bg-green-500/20 text-green-700 border border-green-500/30 dark:text-green-300",
-        medium: "bg-blue-500/20 text-blue-700 border border-blue-500/30 dark:text-blue-300",
-        hard: "bg-orange-500/20 text-orange-700 border border-orange-500/30 dark:text-orange-300",
-        legendary: "bg-purple-500/20 text-purple-700 border border-purple-500/30 dark:text-purple-300",
+        easy: "bg-gradient-to-br from-green-500/25 to-green-400/10 text-green-700 border border-green-500/30 shadow-xs dark:text-green-300",
+        medium: "bg-gradient-to-br from-blue-500/25 to-blue-400/10 text-blue-700 border border-blue-500/30 shadow-xs dark:text-blue-300",
+        hard: "bg-gradient-to-br from-orange-500/25 to-orange-400/10 text-orange-700 border border-orange-500/30 shadow-xs dark:text-orange-300",
+        legendary: "bg-gradient-to-br from-purple-500/30 to-fuchsia-400/15 text-purple-700 border border-purple-500/30 shadow-xs dark:text-purple-300",
       },
     },
     defaultVariants: {

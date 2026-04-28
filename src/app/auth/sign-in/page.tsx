@@ -35,14 +35,19 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight">
+          <div className="mb-3 text-5xl" aria-hidden>
+            🗝️
+          </div>
+          <h1 className="font-heading text-4xl leading-tight font-bold tracking-tight">
             Executive Dysfunction{" "}
-            <span className="text-primary">Planner</span>
+            <span className="bg-gradient-to-br from-primary to-chart-2 bg-clip-text text-transparent">
+              Planner
+            </span>
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm text-muted-foreground">
             Your quest log awaits, Adventurer.
           </p>
         </div>
@@ -50,8 +55,8 @@ export default function SignInPage() {
         {submitted ? (
           <Card>
             <CardContent className="pt-6 text-center">
-              <div className="mb-3 text-3xl">📬</div>
-              <h2 className="text-xl font-bold">Check your inbox</h2>
+              <div className="mb-3 text-4xl">📬</div>
+              <h2 className="font-heading text-xl font-semibold">Check your inbox</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 We sent a magic link to{" "}
                 <span className="font-medium text-foreground">{email}</span>.
