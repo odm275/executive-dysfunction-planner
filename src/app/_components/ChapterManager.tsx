@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Pencil, Plus, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -18,22 +18,23 @@ interface ChapterManagerProps {
 }
 
 // ---------------------------------------------------------------------------
-// ChapterRow — renders one chapter with inline-rename support
+// ChapterRow — renders one chapter with inline rename + delete-confirm flows
 // ---------------------------------------------------------------------------
 function ChapterRow({
   chapter,
-  onRenamed,
+  onMutated,
 }: {
   chapter: Chapter;
-  onRenamed: () => void;
+  onMutated: () => void;
 }) {
+  // ── Rename state ──────────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(chapter.name);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const updateChapter = api.chapter.updateChapter.useMutation({
     onSuccess: () => {
-      onRenamed();
+      onMutated();
       setIsEditing(false);
     },
   });
@@ -41,8 +42,9 @@ function ChapterRow({
   function startEdit() {
     setEditName(chapter.name);
     setIsEditing(true);
+    setShowDeleteConfirm(false);
     updateChapter.reset();
-    setTimeout(() => inputRef.current?.focus(), 0);
+    setTimeout(() => renameInputRef.current?.focus(), 0);
   }
 
   function commitSave() {
@@ -60,7 +62,7 @@ function ChapterRow({
     updateChapter.reset();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
       commitSave();
@@ -71,25 +73,49 @@ function ChapterRow({
   }
 
   function handleBlur() {
-    // Only cancel — don't auto-save on blur (avoids firing on every click away)
     if (!updateChapter.isPending) {
       cancelEdit();
     }
   }
 
+  // ── Delete state ──────────────────────────────────────────────────────────
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const deleteChapter = api.chapter.deleteChapter.useMutation({
+    onSuccess: () => {
+      onMutated();
+    },
+  });
+
+  function openDeleteConfirm() {
+    setShowDeleteConfirm(true);
+    setIsEditing(false);
+    deleteChapter.reset();
+  }
+
+  function confirmDelete() {
+    deleteChapter.mutate({ id: chapter.id });
+  }
+
+  function cancelDelete() {
+    setShowDeleteConfirm(false);
+    deleteChapter.reset();
+  }
+
+  // ── Inline rename form ───────────────────────────────────────────────────
   if (isEditing) {
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
           <Input
-            ref={inputRef}
+            ref={renameInputRef}
             data-testid={`chapter-rename-input-${chapter.id}`}
             value={editName}
             onChange={(e) => {
               setEditName(e.target.value);
               if (updateChapter.isError) updateChapter.reset();
             }}
-            onKeyDown={handleKeyDown}
+            onKeyDown={handleRenameKeyDown}
             onBlur={handleBlur}
             className="h-7 text-xs"
             disabled={updateChapter.isPending}
@@ -138,6 +164,59 @@ function ChapterRow({
     );
   }
 
+  // ── Inline delete confirmation ────────────────────────────────────────────
+  if (showDeleteConfirm) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5 rounded bg-destructive/10 px-2 py-1">
+          <p
+            className="flex-1 text-xs text-destructive"
+            data-testid={`chapter-delete-warning-${chapter.id}`}
+          >
+            Delete &ldquo;{chapter.name}&rdquo; and all its objectives permanently?
+          </p>
+          <Button
+            size="sm"
+            variant="destructive"
+            data-testid={`chapter-delete-confirm-btn-${chapter.id}`}
+            aria-label="Confirm delete chapter"
+            onClick={confirmDelete}
+            disabled={deleteChapter.isPending}
+            className="h-7 shrink-0 px-2 text-xs"
+          >
+            {deleteChapter.isPending ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Trash2 className="size-3" />
+            )}
+            Delete
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid={`chapter-delete-cancel-btn-${chapter.id}`}
+            aria-label="Cancel deleting chapter"
+            onClick={cancelDelete}
+            disabled={deleteChapter.isPending}
+            className="h-7 shrink-0 px-2 text-xs text-muted-foreground"
+          >
+            <X className="size-3" />
+            Cancel
+          </Button>
+        </div>
+        {deleteChapter.isError && (
+          <p
+            className="text-xs text-destructive"
+            data-testid={`chapter-delete-error-${chapter.id}`}
+          >
+            {deleteChapter.error.message ?? "Failed to delete chapter. Please try again."}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Default row view ──────────────────────────────────────────────────────
   return (
     <div className="flex items-center gap-1.5">
       <button
@@ -158,6 +237,17 @@ function ChapterRow({
       >
         <Pencil className="size-3" />
         Rename
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        data-testid={`chapter-delete-btn-${chapter.id}`}
+        aria-label={`Delete chapter: ${chapter.name}`}
+        onClick={openDeleteConfirm}
+        className="h-6 shrink-0 px-1.5 text-xs text-muted-foreground hover:text-destructive"
+      >
+        <Trash2 className="size-3" />
+        Delete
       </Button>
     </div>
   );
@@ -211,7 +301,7 @@ export function ChapterManager({ questId, chapters }: ChapterManagerProps) {
     createChapter.reset();
   }
 
-  function handleRenamed() {
+  function handleMutated() {
     void utils.quest.listActiveQuests.invalidate();
   }
 
@@ -224,7 +314,7 @@ export function ChapterManager({ questId, chapters }: ChapterManagerProps) {
       {chapters.length > 0 && (
         <div className="mb-2 space-y-1">
           {chapters.map((ch) => (
-            <ChapterRow key={ch.id} chapter={ch} onRenamed={handleRenamed} />
+            <ChapterRow key={ch.id} chapter={ch} onMutated={handleMutated} />
           ))}
         </div>
       )}
