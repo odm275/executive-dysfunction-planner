@@ -30,7 +30,7 @@ await run({
   // GitHub Copilot OAuth (from auth.json) instead of looking for an Anthropic
   // API key. Note: GH Copilot uses dot notation — claude-sonnet-4.6, not 4-6.
   // PI_CODING_AGENT_DIR points pi to the writable config dir we set up below.
-  agent: pi("github-copilot/claude-sonnet-4.6", {
+  agent: pi("github-copilot/claude-sonnet-4.6:high", {
     env: { PI_CODING_AGENT_DIR: "/home/agent/.pi-agent" },
   }),
 
