@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
 import { api } from "~/trpc/react";
+import { ChapterManager } from "~/app/_components/ChapterManager";
 import { EditQuestForm } from "~/app/_components/EditQuestForm";
 import { QuestBuilderChat } from "~/app/_components/QuestBuilderChat";
 import { Badge, type badgeVariants } from "~/components/ui/badge";
@@ -1150,6 +1151,9 @@ export function QuestCard({
         {/* Expanded content */}
         <CollapsibleContent>
           <div className="border-t border-border px-2 py-3">
+            {/* Chapter Manager */}
+            <ChapterManager questId={quest.id} chapters={quest.chapters} />
+
             {/* Chapters */}
             {quest.chapters.map((ch) => {
               const chObjs = quest.objectives.filter(

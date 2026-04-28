@@ -50,7 +50,7 @@ export const chapterRouter = createTRPCRouter({
       }
     }),
 
-  /** Delete a chapter (objectives within it are unlinked via set-null cascade). */
+  /** Delete a chapter and all its child objectives (application-layer cascade). */
   deleteChapter: protectedProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
