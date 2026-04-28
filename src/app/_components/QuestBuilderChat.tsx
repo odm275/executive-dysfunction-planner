@@ -2,7 +2,7 @@
 
 import { useChat } from "ai/react";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { CreateQuestForm } from "~/app/_components/CreateQuestForm";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -129,8 +129,59 @@ function ProposalReview({
     proposal.objectives.map((o) => ({ ...o, accepted: true })),
   );
 
+  // Inline "Add chapter" state: tracks which objective index triggered it
+  const [addingChapterForObj, setAddingChapterForObj] = useState<number | null>(null);
+  const [newChapterInput, setNewChapterInput] = useState("");
+
   const acceptedChapters = chapters.filter((c) => c.accepted);
   const acceptedObjectives = objectives.filter((o) => o.accepted);
+
+  function toggleChapter(index: number, checked: boolean) {
+    const chapterName = chapters[index]?.name;
+    setChapters((prev) =>
+      prev.map((c, j) => (j === index ? { ...c, accepted: checked } : c)),
+    );
+    // If rejecting, reset any objectives that were using this chapter
+    if (!checked && chapterName) {
+      setObjectives((prev) =>
+        prev.map((o) =>
+          o.chapterName === chapterName ? { ...o, chapterName: null } : o,
+        ),
+      );
+    }
+  }
+
+  function handleObjectiveChapterChange(objIndex: number, value: string) {
+    if (value === "__new__") {
+      setAddingChapterForObj(objIndex);
+      setNewChapterInput("");
+      return;
+    }
+    setObjectives((prev) =>
+      prev.map((o, j) =>
+        j === objIndex ? { ...o, chapterName: value || null } : o,
+      ),
+    );
+  }
+
+  function confirmNewChapter(objIndex: number) {
+    const trimmed = newChapterInput.trim();
+    if (!trimmed) {
+      setAddingChapterForObj(null);
+      return;
+    }
+    // Add chapter to list if not already present
+    const exists = chapters.some((c) => c.name === trimmed);
+    if (!exists) {
+      setChapters((prev) => [...prev, { name: trimmed, accepted: true }]);
+    }
+    // Assign to objective
+    setObjectives((prev) =>
+      prev.map((o, j) => (j === objIndex ? { ...o, chapterName: trimmed } : o)),
+    );
+    setAddingChapterForObj(null);
+    setNewChapterInput("");
+  }
 
   function handleConfirm() {
     onConfirm({
@@ -198,13 +249,7 @@ function ProposalReview({
                 <Checkbox
                   data-testid={`proposal-chapter-accept-${i}`}
                   checked={ch.accepted}
-                  onCheckedChange={(checked) =>
-                    setChapters((prev) =>
-                      prev.map((c, j) =>
-                        j === i ? { ...c, accepted: Boolean(checked) } : c,
-                      ),
-                    )
-                  }
+                  onCheckedChange={(checked) => toggleChapter(i, Boolean(checked))}
                 />
                 <Input
                   value={ch.name}
@@ -262,7 +307,7 @@ function ProposalReview({
                   }
                   className="h-7 border-none bg-transparent text-sm shadow-none focus-visible:ring-0"
                 />
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Select
                     value={obj.difficulty}
                     onValueChange={(value) =>
@@ -291,10 +336,70 @@ function ProposalReview({
                       <SelectItem value="LEGENDARY">Legendary</SelectItem>
                     </SelectContent>
                   </Select>
-                  {obj.chapterName && (
-                    <span className="text-xs text-muted-foreground">
-                      in {obj.chapterName}
-                    </span>
+
+                  {/* Chapter picker */}
+                  {addingChapterForObj === i ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        data-testid={`proposal-objective-new-chapter-input-${i}`}
+                        value={newChapterInput}
+                        onChange={(e) => setNewChapterInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            confirmNewChapter(i);
+                          }
+                          if (e.key === "Escape") {
+                            setAddingChapterForObj(null);
+                          }
+                        }}
+                        placeholder="New chapter name"
+                        autoFocus
+                        className="h-6 w-32 text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        data-testid={`proposal-objective-new-chapter-confirm-${i}`}
+                        aria-label="Confirm new chapter"
+                        onClick={() => confirmNewChapter(i)}
+                        className="h-6 px-1.5 text-xs"
+                      >
+                        <Check className="size-3" />
+                        Add
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid={`proposal-objective-new-chapter-cancel-${i}`}
+                        aria-label="Cancel adding chapter"
+                        onClick={() => setAddingChapterForObj(null)}
+                        className="h-6 px-1.5 text-xs text-muted-foreground"
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={obj.chapterName ?? ""}
+                      onValueChange={(value) => handleObjectiveChapterChange(i, value ?? "")}
+                    >
+                      <SelectTrigger
+                        data-testid={`proposal-objective-chapter-${i}`}
+                        size="sm"
+                        className="h-6 w-auto border-none text-xs shadow-none"
+                      >
+                        <SelectValue placeholder="No chapter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No chapter</SelectItem>
+                        {acceptedChapters.map((ch) => (
+                          <SelectItem key={ch.name} value={ch.name}>
+                            {ch.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__new__">Add chapter…</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
               </div>
