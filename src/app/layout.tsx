@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Roboto, Fraunces } from "next/font/google";
+import { Roboto } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { ThemeProvider } from "~/components/ThemeProvider";
@@ -18,19 +18,13 @@ const roboto = Roboto({
   weight: ["400", "500", "700"],
 });
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["500", "600", "700"],
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      className={`${roboto.variable} ${fraunces.variable}`}
+      className={roboto.variable}
       suppressHydrationWarning
     >
       <body>
