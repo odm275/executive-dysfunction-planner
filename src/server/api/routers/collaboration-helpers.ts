@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import { eq, and } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
-import * as schema from "~/server/db/schema";
+import type * as schema from "~/server/db/schema";
 import { objective, collaborator, user } from "~/server/db/schema";
 
 export type CollaborationDb = LibSQLDatabase<typeof schema>;

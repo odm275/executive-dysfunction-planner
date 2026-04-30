@@ -5,7 +5,7 @@
 import { eq, and } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
-import * as schema from "~/server/db/schema";
+import type * as schema from "~/server/db/schema";
 import { quest, objective } from "~/server/db/schema";
 
 export const MAX_ACTIVE_QUESTS = 6;

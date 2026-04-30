@@ -32,7 +32,7 @@ export const suggestionRouter = createTRPCRouter({
         eq(energyState.date, todayUTC()),
       ),
     });
-    const energy: EnergyLevel = (todayEnergy?.value ?? "MEDIUM") as EnergyLevel;
+    const energy: EnergyLevel = (todayEnergy?.value ?? "MEDIUM");
 
     // 2. Fetch all active (non-archived) quests with objectives and counter-tools
     const activeQuests = await ctx.db.query.quest.findMany({
@@ -52,7 +52,7 @@ export const suggestionRouter = createTRPCRouter({
         questName: q.name,
         isSideQuest: q.isSideQuest,
         name: o.name,
-        difficulty: o.difficulty as SuggestionObjective["difficulty"],
+        difficulty: o.difficulty,
         isDebuffed: o.isDebuffed,
         isCompleted: o.isCompleted,
         counterTools: o.counterTools.map((ct) => ({

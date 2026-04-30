@@ -90,7 +90,7 @@ describe("Onboarding — hasAnyQuests detection", () => {
 // ---------------------------------------------------------------------------
 
 function extractProposal(content: string) {
-  const match = content.match(/```json\s*([\s\S]*?)```/);
+  const match = /```json\s*([\s\S]*?)```/.exec(content);
   if (!match?.[1]) return null;
   try {
     return JSON.parse(match[1]) as {

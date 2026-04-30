@@ -3,7 +3,7 @@ import webpush from "web-push";
 import { eq, and } from "drizzle-orm";
 
 import { db } from "~/server/db";
-import * as schema from "~/server/db/schema";
+import type * as schema from "~/server/db/schema";
 import { quest, objective, pushSubscription } from "~/server/db/schema";
 import {
   evaluateReminderConditions,

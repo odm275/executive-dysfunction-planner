@@ -300,12 +300,12 @@ export function WorldMapClient() {
     return <EnergyCheckIn onComplete={() => setJustSet(true)} />;
   }
 
-  const energy = (todayEnergy?.value ?? "MEDIUM") as EnergyLevel;
+  const energy = (todayEnergy?.value ?? "MEDIUM");
   const activeQuests = quests ?? [];
   const slotsRemaining = MAX_ACTIVE_QUESTS - activeQuests.length;
   const suggestions = suggestionData?.suggestions ?? [];
   const resolvedEnergy: EnergyLevel =
-    (suggestionData?.energy ?? energy) as EnergyLevel;
+    (suggestionData?.energy ?? energy);
   const selectedQuest =
     selectedQuestId !== null
       ? (activeQuests.find((q) => q.id === selectedQuestId) ?? null)

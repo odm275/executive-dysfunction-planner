@@ -296,7 +296,7 @@ function ObjectiveDetail({
             <Select
               value={editDifficulty}
               onValueChange={(value) =>
-                setEditDifficulty(value as Objective["difficulty"])
+                setEditDifficulty(value!)
               }
             >
               <SelectTrigger data-testid={`objective-edit-difficulty-${obj.id}`}>
@@ -1022,7 +1022,7 @@ function QuickAddObjectiveForm({
       />
       <Select
         value={difficulty}
-        onValueChange={(value) => setDifficulty(value as typeof difficulty)}
+        onValueChange={(value) => setDifficulty(value!)}
       >
         <SelectTrigger
           data-testid={`quick-add-objective-difficulty-${questId}`}

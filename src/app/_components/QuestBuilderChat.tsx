@@ -75,7 +75,7 @@ const DIFFICULTY_VARIANTS: Record<
 // ---------------------------------------------------------------------------
 
 function extractQuestProposal(content: string): QuestProposal | null {
-  const match = content.match(/```json\s*([\s\S]*?)```/);
+  const match = /```json\s*([\s\S]*?)```/.exec(content);
   if (!match?.[1]) return null;
   try {
     const parsed = JSON.parse(match[1]) as Record<string, unknown>;
@@ -89,7 +89,7 @@ function extractQuestProposal(content: string): QuestProposal | null {
 function extractAddObjectivesProposal(
   content: string,
 ): AddObjectivesProposal | null {
-  const match = content.match(/```json\s*([\s\S]*?)```/);
+  const match = /```json\s*([\s\S]*?)```/.exec(content);
   if (!match?.[1]) return null;
   try {
     const parsed = JSON.parse(match[1]) as Record<string, unknown>;
@@ -314,7 +314,7 @@ function ProposalReview({
                       setObjectives((prev) =>
                         prev.map((o, j) =>
                           j === i
-                            ? { ...o, difficulty: value as Difficulty }
+                            ? { ...o, difficulty: value! }
                             : o,
                         ),
                       )
@@ -501,7 +501,7 @@ function AddObjectivesProposalReview({
                       setObjectives((prev) =>
                         prev.map((o, j) =>
                           j === i
-                            ? { ...o, difficulty: value as Difficulty }
+                            ? { ...o, difficulty: value! }
                             : o,
                         ),
                       )
@@ -578,12 +578,12 @@ export function QuestBuilderChat(props: QuestBuilderChatProps) {
   const { mode, onSuccess, onCancel } = props;
 
   const isAddMode = mode === "add-objectives";
-  const questId = isAddMode ? (props as AddObjectivesProps).questId : undefined;
+  const questId = isAddMode ? (props).questId : undefined;
   const questNameContext = isAddMode
-    ? (props as AddObjectivesProps).questName
+    ? (props).questName
     : undefined;
   const existingObjectiveNames = isAddMode
-    ? (props as AddObjectivesProps).existingObjectiveNames
+    ? (props).existingObjectiveNames
     : [];
 
   type Phase = "chat" | "review" | "confirming" | "skip";

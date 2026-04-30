@@ -54,7 +54,7 @@ const DIFFICULTY_VARIANTS: Record<
 
 /** Try to extract a JSON block from the last assistant message. */
 function extractProposal(content: string): QuestProposal | null {
-  const match = content.match(/```json\s*([\s\S]*?)```/);
+  const match = /```json\s*([\s\S]*?)```/.exec(content);
   if (!match?.[1]) return null;
   try {
     return JSON.parse(match[1]) as QuestProposal;
@@ -235,7 +235,7 @@ function ProposalReview({
                       setObjectives((prev) =>
                         prev.map((o, j) =>
                           j === i
-                            ? { ...o, difficulty: value as ProposedObjective["difficulty"] }
+                            ? { ...o, difficulty: value! }
                             : o,
                         ),
                       )
