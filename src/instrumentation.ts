@@ -26,7 +26,14 @@ export async function register() {
   // client-side bundling.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  const { migrate } = await import("drizzle-orm/libsql/migrator");
+  // webpackIgnore prevents webpack from statically analyzing this import.
+  // drizzle's migrator transitively uses node:fs and node:crypto, which
+  // webpack cannot handle for non-Node.js bundle targets. Since this code
+  // only ever executes on the Node.js runtime (guarded above), the import
+  // resolves fine at runtime via normal Node.js module resolution.
+  const { migrate } = await import(
+    /* webpackIgnore: true */ "drizzle-orm/libsql/migrator"
+  );
   const { db } = await import("~/server/db");
 
   await migrate(db, { migrationsFolder: "./drizzle" });
