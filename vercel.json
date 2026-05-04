@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm run build && npx drizzle-kit migrate",
   "crons": [
     {
       "path": "/api/cron/send-reminders",
