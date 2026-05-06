@@ -31,6 +31,10 @@ export const userRelations = relations(user, ({ many, one }) => ({
   collaborators: many(collaborator),
   pushSubscriptions: many(pushSubscription),
   reminderPreferences: one(reminderPreferences),
+  availabilityWindows: many(availabilityWindow),
+  dailyAvailabilityOverrides: many(dailyAvailabilityOverride),
+  dailyScheduleItems: many(dailyScheduleItem),
+  workSessions: many(workSession),
 }));
 
 export const account = sqliteTable(
@@ -216,6 +220,8 @@ export const objectiveRelations = relations(objective, ({ one, many }) => ({
   subTasks: many(subTask),
   counterTools: many(counterTool),
   collaborators: many(collaborator),
+  dailyScheduleItems: many(dailyScheduleItem),
+  workSessions: many(workSession),
 }));
 
 export const subTask = sqliteTable(
@@ -403,3 +409,160 @@ export const reminderPreferencesRelations = relations(
     }),
   }),
 );
+
+// ─── War Table Tables ─────────────────────────────────────────────────────────
+
+export const availabilityWindow = sqliteTable(
+  "edp_availability_window",
+  (d) => ({
+    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+    userId: d
+      .text({ length: 255 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    dayOfWeek: d.integer({ mode: "number" }).notNull(), // 0 = Sunday, 6 = Saturday
+    startTime: d.text({ length: 5 }).notNull(), // HH:MM
+    endTime: d.text({ length: 5 }).notNull(), // HH:MM
+    createdAt: d
+      .integer({ mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("availability_window_user_id_idx").on(t.userId),
+    index("availability_window_user_day_idx").on(t.userId, t.dayOfWeek),
+  ],
+);
+
+export const availabilityWindowRelations = relations(
+  availabilityWindow,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [availabilityWindow.userId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const dailyAvailabilityOverride = sqliteTable(
+  "edp_daily_availability_override",
+  (d) => ({
+    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+    userId: d
+      .text({ length: 255 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    date: d.text({ length: 10 }).notNull(), // YYYY-MM-DD
+    startTime: d.text({ length: 5 }).notNull(), // HH:MM
+    endTime: d.text({ length: 5 }).notNull(), // HH:MM
+    createdAt: d
+      .integer({ mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("daily_availability_override_user_id_idx").on(t.userId),
+    index("daily_availability_override_user_date_idx").on(t.userId, t.date),
+  ],
+);
+
+export const dailyAvailabilityOverrideRelations = relations(
+  dailyAvailabilityOverride,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [dailyAvailabilityOverride.userId],
+      references: [user.id],
+    }),
+  }),
+);
+
+export const dailyScheduleItem = sqliteTable(
+  "edp_daily_schedule_item",
+  (d) => ({
+    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+    userId: d
+      .text({ length: 255 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    objectiveId: d
+      .integer({ mode: "number" })
+      .notNull()
+      .references(() => objective.id, { onDelete: "cascade" }),
+    date: d.text({ length: 10 }).notNull(), // YYYY-MM-DD
+    intendedDuration: d.integer({ mode: "number" }).notNull(), // minutes
+    order: d.integer({ mode: "number" }).default(0).notNull(),
+    createdAt: d
+      .integer({ mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("daily_schedule_item_user_id_idx").on(t.userId),
+    index("daily_schedule_item_user_date_idx").on(t.userId, t.date),
+    index("daily_schedule_item_objective_id_idx").on(t.objectiveId),
+  ],
+);
+
+export const dailyScheduleItemRelations = relations(
+  dailyScheduleItem,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [dailyScheduleItem.userId],
+      references: [user.id],
+    }),
+    objective: one(objective, {
+      fields: [dailyScheduleItem.objectiveId],
+      references: [objective.id],
+    }),
+    workSessions: many(workSession),
+  }),
+);
+
+export const workSession = sqliteTable(
+  "edp_work_session",
+  (d) => ({
+    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+    userId: d
+      .text({ length: 255 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    objectiveId: d
+      .integer({ mode: "number" })
+      .notNull()
+      .references(() => objective.id, { onDelete: "cascade" }),
+    scheduleItemId: d
+      .integer({ mode: "number" })
+      .notNull()
+      .references(() => dailyScheduleItem.id, { onDelete: "cascade" }),
+    date: d.text({ length: 10 }).notNull(), // YYYY-MM-DD
+    startedAt: d.integer({ mode: "timestamp" }).notNull(),
+    endedAt: d.integer({ mode: "timestamp" }),
+    actualDuration: d.integer({ mode: "number" }), // minutes, nullable until completed
+    createdAt: d
+      .integer({ mode: "timestamp" })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("work_session_user_id_idx").on(t.userId),
+    index("work_session_user_date_idx").on(t.userId, t.date),
+    index("work_session_schedule_item_id_idx").on(t.scheduleItemId),
+    index("work_session_objective_id_idx").on(t.objectiveId),
+  ],
+);
+
+export const workSessionRelations = relations(workSession, ({ one }) => ({
+  user: one(user, { fields: [workSession.userId], references: [user.id] }),
+  objective: one(objective, {
+    fields: [workSession.objectiveId],
+    references: [objective.id],
+  }),
+  scheduleItem: one(dailyScheduleItem, {
+    fields: [workSession.scheduleItemId],
+    references: [dailyScheduleItem.id],
+  }),
+}));

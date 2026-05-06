@@ -30,5 +30,12 @@
       "tag": "0003_objective_description",
       "breakpoints": true
     }
+    ,{
+      "idx": 4,
+      "version": "6",
+      "when": 1746489600000,
+      "tag": "0004_war_table_schema",
+      "breakpoints": true
+    }
   ]
 }
