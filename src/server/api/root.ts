@@ -1,3 +1,4 @@
+import { availabilityRouter } from "~/server/api/routers/availability";
 import { chapterRouter } from "~/server/api/routers/chapter";
 import { collaborationRouter } from "~/server/api/routers/collaboration";
 import { debuffRouter } from "~/server/api/routers/debuff";
@@ -17,6 +18,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  availability: availabilityRouter,
   chapter: chapterRouter,
   collaboration: collaborationRouter,
   debuff: debuffRouter,

@@ -1,16 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { buttonVariants } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { AvailabilitySettings } from "~/app/_components/AvailabilitySettings";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "~/components/ui/sheet";
 
 export function WarTableClient() {
+  const [showAvailability, setShowAvailability] = useState(false);
+
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between px-6 py-4">
         <h1 className="text-xl font-bold tracking-tight">The War Table</h1>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAvailability(true)}
+          >
+            🕐 Availability
+          </Button>
           <Link
             href="/"
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -43,6 +61,18 @@ export function WarTableClient() {
           </p>
         </section>
       </div>
+
+      {/* Availability settings sheet */}
+      <Sheet open={showAvailability} onOpenChange={setShowAvailability}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Availability Settings</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 overflow-y-auto">
+            <AvailabilitySettings />
+          </div>
+        </SheetContent>
+      </Sheet>
     </main>
   );
 }
