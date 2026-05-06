@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { AvailabilitySettings } from "~/app/_components/AvailabilitySettings";
 import { CurrentFocusHero } from "~/app/_components/CurrentFocusHero";
+import { MiniTimeline } from "~/app/_components/MiniTimeline";
 import {
   Sheet,
   SheetContent,
@@ -50,14 +51,12 @@ export function WarTableClient() {
           <CurrentFocusHero />
         </section>
 
-        {/* Bottom zone — Mini Timeline (placeholder) */}
+        {/* Bottom zone — Mini Timeline */}
         <section
-          className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30"
+          className="flex flex-1 overflow-hidden rounded-lg border border-border bg-card"
           aria-label="Mini Timeline"
         >
-          <p className="text-sm text-muted-foreground">
-            Add objectives to get started
-          </p>
+          <MiniTimeline />
         </section>
       </div>
 
