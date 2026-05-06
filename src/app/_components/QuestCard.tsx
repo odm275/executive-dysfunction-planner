@@ -132,6 +132,16 @@ function ObjectiveDetail({
   const [editIsRecruitable, setEditIsRecruitable] = useState(obj.isRecruitable);
   const [editDescription, setEditDescription] = useState(obj.description ?? "");
 
+  // ---- Add to today state ----
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [addedToday, setAddedToday] = useState(false);
+  const addToToday = api.warTable.addToToday.useMutation({
+    onSuccess: () => {
+      setShowDurationPicker(false);
+      setAddedToday(true);
+    },
+  });
+
   // ---- Description collapse state ----
   const [descriptionOpen, setDescriptionOpen] = useState(true);
 
@@ -479,6 +489,50 @@ function ObjectiveDetail({
               <><Check className="size-3" /> Complete</>
             )}
           </Button>
+        </div>
+      )}
+
+      {/* Add to today button + inline duration picker */}
+      {!obj.isCompleted && (
+        <div className="mb-3">
+          {addedToday ? (
+            <p className="text-xs text-green-600 dark:text-green-400">✅ Added to today’s War Table</p>
+          ) : showDurationPicker ? (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              <p className="text-xs font-medium">How long do you intend to spend?</p>
+              <div className="flex flex-wrap gap-2">
+                {[30, 60, 90, 120].map((mins) => (
+                  <Button
+                    key={mins}
+                    variant="outline"
+                    size="sm"
+                    disabled={addToToday.isPending}
+                    onClick={() =>
+                      addToToday.mutate({ objectiveId: obj.id, intendedDuration: mins })
+                    }
+                  >
+                    {mins === 30 ? "30m" : mins === 60 ? "1h" : mins === 90 ? "1.5h" : "2h"}
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDurationPicker(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid={`add-to-today-btn-${obj.id}`}
+              onClick={() => setShowDurationPicker(true)}
+            >
+              ⚔️ Add to today
+            </Button>
+          )}
         </div>
       )}
 
