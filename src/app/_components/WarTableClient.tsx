@@ -6,6 +6,7 @@ import { buttonVariants } from "~/components/ui/button";
 import { Button } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { AvailabilitySettings } from "~/app/_components/AvailabilitySettings";
+import { CurrentFocusHero } from "~/app/_components/CurrentFocusHero";
 import {
   Sheet,
   SheetContent,
@@ -41,14 +42,12 @@ export function WarTableClient() {
 
       {/* Two-zone layout */}
       <div className="flex flex-1 flex-col gap-4 overflow-hidden px-6 pb-6">
-        {/* Top zone — Current Focus Hero (placeholder) */}
+        {/* Top zone — Current Focus Hero */}
         <section
-          className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30"
+          className="flex flex-1 overflow-hidden rounded-lg border border-border bg-card"
           aria-label="Current Focus Hero"
         >
-          <p className="text-sm text-muted-foreground">
-            Current Focus Hero — coming soon
-          </p>
+          <CurrentFocusHero />
         </section>
 
         {/* Bottom zone — Mini Timeline (placeholder) */}

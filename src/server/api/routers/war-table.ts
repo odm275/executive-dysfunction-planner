@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { and, asc, eq } from "drizzle-orm";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -12,6 +13,7 @@ import {
   getTodayOverrideFn,
 } from "~/server/api/routers/availability-helpers";
 import { resolveWindows } from "~/server/availability-window-resolver";
+import { dailyScheduleItem, objective, quest } from "~/server/db/schema";
 
 export const warTableRouter = createTRPCRouter({
   /**
@@ -49,6 +51,7 @@ export const warTableRouter = createTRPCRouter({
   /**
    * Return today's schedule with scheduledStart computed at read time.
    * scheduledStart is never stored — it is always computed by war-table-scheduler.
+   * Items are enriched with objective and quest names.
    */
   getTodaySchedule: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
@@ -61,7 +64,48 @@ export const warTableRouter = createTRPCRouter({
     const overrideWindows = await getTodayOverrideFn(ctx.db, userId);
     const windows = resolveWindows(todayTemplate, overrideWindows);
 
-    return getTodayScheduleFn(ctx.db, userId, currentTime, windows);
+    const scheduled = await getTodayScheduleFn(
+      ctx.db,
+      userId,
+      currentTime,
+      windows,
+    );
+
+    if (scheduled.length === 0) return [];
+
+    // Enrich with objective and quest names
+    const date = currentTime.toISOString().slice(0, 10);
+    const rawItems = await ctx.db
+      .select({
+        id: dailyScheduleItem.id,
+        objectiveId: dailyScheduleItem.objectiveId,
+        intendedDuration: dailyScheduleItem.intendedDuration,
+        order: dailyScheduleItem.order,
+        objectiveName: objective.name,
+        questId: objective.questId,
+        questName: quest.name,
+        difficulty: objective.difficulty,
+      })
+      .from(dailyScheduleItem)
+      .innerJoin(objective, eq(dailyScheduleItem.objectiveId, objective.id))
+      .innerJoin(quest, eq(objective.questId, quest.id))
+      .where(
+        and(
+          eq(dailyScheduleItem.userId, userId),
+          eq(dailyScheduleItem.date, date),
+        ),
+      )
+      .orderBy(asc(dailyScheduleItem.order));
+
+    // Merge scheduledStart values from the scheduler output
+    const scheduledMap = new Map(
+      scheduled.map((s) => [s.id, s.scheduledStart]),
+    );
+
+    return rawItems.map((item) => ({
+      ...item,
+      scheduledStart: scheduledMap.get(item.id),
+    }));
   }),
 
   /**
