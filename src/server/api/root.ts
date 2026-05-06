@@ -11,6 +11,7 @@ import { suggestionRouter } from "~/server/api/routers/suggestion";
 import { userRouter } from "~/server/api/routers/user";
 import { reminderRouter } from "~/server/api/routers/reminder";
 import { warTableRouter } from "~/server/api/routers/war-table";
+import { workSessionRouter } from "~/server/api/routers/work-session";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
   suggestion: suggestionRouter,
   user: userRouter,
   warTable: warTableRouter,
+  workSession: workSessionRouter,
 });
 
 // export type definition of API
