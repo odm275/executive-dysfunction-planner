@@ -10,6 +10,7 @@ import { rewardRouter } from "~/server/api/routers/reward";
 import { suggestionRouter } from "~/server/api/routers/suggestion";
 import { userRouter } from "~/server/api/routers/user";
 import { reminderRouter } from "~/server/api/routers/reminder";
+import { warTableRouter } from "~/server/api/routers/war-table";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -30,6 +31,7 @@ export const appRouter = createTRPCRouter({
   reminder: reminderRouter,
   suggestion: suggestionRouter,
   user: userRouter,
+  warTable: warTableRouter,
 });
 
 // export type definition of API
