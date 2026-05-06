@@ -8,6 +8,7 @@ import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { AvailabilitySettings } from "~/app/_components/AvailabilitySettings";
 import { CurrentFocusHero } from "~/app/_components/CurrentFocusHero";
 import { MiniTimeline } from "~/app/_components/MiniTimeline";
+import { QueueManager } from "~/app/_components/QueueManager";
 import {
   Sheet,
   SheetContent,
@@ -51,12 +52,21 @@ export function WarTableClient() {
           <CurrentFocusHero />
         </section>
 
-        {/* Bottom zone — Mini Timeline */}
+        {/* Bottom zone — Mini Timeline + Queue Manager */}
         <section
-          className="flex flex-1 overflow-hidden rounded-lg border border-border bg-card"
+          className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card"
           aria-label="Mini Timeline"
         >
-          <MiniTimeline />
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left: Mini Timeline */}
+            <div className="flex-1 overflow-hidden border-r border-border">
+              <MiniTimeline />
+            </div>
+            {/* Right: Queue controls */}
+            <div className="w-72 shrink-0 overflow-y-auto p-4">
+              <QueueManager />
+            </div>
+          </div>
         </section>
       </div>
 
