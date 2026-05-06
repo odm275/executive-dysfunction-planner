@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { EnergyCheckIn } from "~/app/_components/EnergyCheckIn";
 import { QuestCard } from "~/app/_components/QuestCard";
@@ -13,7 +14,7 @@ import { OnboardingConversation } from "~/app/_components/OnboardingConversation
 import { PartyMemberDashboard } from "~/app/_components/PartyMemberDashboard";
 import { ReminderPreferences } from "~/app/_components/ReminderPreferences";
 import { ArchivedQuestsSheet } from "~/app/_components/ArchivedQuestsSheet";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import {
   Dialog,
@@ -319,6 +320,12 @@ export function WorldMapClient() {
           Executive Dysfunction Planner
         </h1>
         <div className="flex items-center gap-3">
+          <Link
+            href="/today"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            ⚔️ War Table
+          </Link>
           <Button
             variant="outline"
             size="sm"
