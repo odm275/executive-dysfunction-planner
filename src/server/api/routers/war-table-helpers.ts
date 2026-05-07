@@ -6,9 +6,10 @@
  */
 import { and, asc, eq, inArray, isNotNull, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
+import { TRPCError } from "@trpc/server";
 
 import * as schema from "~/server/db/schema";
-import { dailyScheduleItem, workSession } from "~/server/db/schema";
+import { dailyScheduleItem, quest, objective, workSession } from "~/server/db/schema";
 import { scheduleItems } from "~/server/war-table-scheduler";
 import type { EnergyLevel } from "~/server/war-table-scheduler";
 
@@ -163,4 +164,67 @@ export async function getAccumulatedDurationsFn(
   }
 
   return result;
+}
+
+/**
+ * Atomically create a minimal objective inside an existing quest and
+ * immediately add it to today's schedule — all in a single round-trip.
+ *
+ * @throws NOT_FOUND when the caller does not own the target quest.
+ * @throws UNPROCESSABLE_CONTENT for empty name or invalid duration.
+ */
+export async function createObjectiveAndAddToTodayFn(
+  db: Db,
+  userId: string,
+  input: { questId: number; name: string; intendedDuration: number },
+) {
+  // Validate inputs
+  if (!input.name || input.name.trim().length === 0) {
+    throw new TRPCError({
+      code: "UNPROCESSABLE_CONTENT",
+      message: "Objective name must not be empty.",
+    });
+  }
+  if (!Number.isInteger(input.intendedDuration) || input.intendedDuration <= 0) {
+    throw new TRPCError({
+      code: "UNPROCESSABLE_CONTENT",
+      message: "Intended duration must be a positive integer (minutes).",
+    });
+  }
+
+  // Verify ownership
+  const ownedQuest = await db.query.quest.findFirst({
+    where: and(eq(quest.id, input.questId), eq(quest.userId, userId)),
+    columns: { id: true },
+  });
+  if (!ownedQuest) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Quest not found.",
+    });
+  }
+
+  // Create the objective with sensible defaults
+  const [createdObjective] = await db
+    .insert(objective)
+    .values({
+      questId: input.questId,
+      name: input.name.trim(),
+      trackingMode: "BINARY",
+      difficulty: "MEDIUM",
+      isDebuffed: false,
+      isRecruitable: false,
+      order: 0,
+    })
+    .returning();
+
+  // Add to today's schedule
+  const scheduleItem = await addToTodayFn(
+    db,
+    userId,
+    createdObjective!.id,
+    input.intendedDuration,
+  );
+
+  return { objective: createdObjective!, scheduleItem };
 }

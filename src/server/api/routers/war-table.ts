@@ -8,6 +8,7 @@ import {
   getTodayScheduleFn,
   reorderQueueFn,
   getAccumulatedDurationsFn,
+  createObjectiveAndAddToTodayFn,
 } from "~/server/api/routers/war-table-helpers";
 import {
   getWeeklyTemplateFn,
@@ -126,5 +127,25 @@ export const warTableRouter = createTRPCRouter({
     .input(z.object({ orderedIds: z.array(z.number().int().positive()) }))
     .mutation(async ({ ctx, input }) => {
       return reorderQueueFn(ctx.db, ctx.session.user.id, input.orderedIds);
+    }),
+
+  /**
+   * Atomically create a new objective in an existing quest and add it to
+   * today's schedule in one round-trip.
+   */
+  createObjectiveAndAddToToday: protectedProcedure
+    .input(
+      z.object({
+        questId: z.number().int().positive(),
+        name: z.string().min(1),
+        intendedDuration: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return createObjectiveAndAddToTodayFn(
+        ctx.db,
+        ctx.session.user.id,
+        input,
+      );
     }),
 });

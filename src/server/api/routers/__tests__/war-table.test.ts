@@ -16,6 +16,7 @@ import {
   getTodayScheduleFn,
   reorderQueueFn,
   getAccumulatedDurationsFn,
+  createObjectiveAndAddToTodayFn,
 } from "../war-table-helpers";
 
 // ---------------------------------------------------------------------------
@@ -301,5 +302,85 @@ describe("Behavior 5: reorderQueue changes item order", () => {
     const schedule = await getTodayScheduleFn(db, "user-wt6", new Date(), []);
     expect(schedule[0]!.id).toBe(item2.id);
     expect(schedule[1]!.id).toBe(item1.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Behavior 7 — createObjectiveAndAddToToday creates objective + schedule item
+// ---------------------------------------------------------------------------
+describe("Behavior 7: createObjectiveAndAddToToday creates objective and schedule item", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("creates an objective in the specified quest and adds it to today's schedule", async () => {
+    await insertUser(db, "user-wt10");
+    const quest = await insertQuest(db, "user-wt10");
+
+    const result = await createObjectiveAndAddToTodayFn(db, "user-wt10", {
+      questId: quest.id,
+      name: "Quick Task",
+      intendedDuration: 30,
+    });
+
+    expect(result.objective.name).toBe("Quick Task");
+    expect(result.objective.questId).toBe(quest.id);
+    expect(result.scheduleItem.objectiveId).toBe(result.objective.id);
+    expect(result.scheduleItem.intendedDuration).toBe(30);
+
+    // Confirm it appears in today's schedule
+    const schedule = await getTodayScheduleFn(db, "user-wt10", new Date(), []);
+    expect(schedule).toHaveLength(1);
+    expect(schedule[0]!.objectiveId).toBe(result.objective.id);
+  });
+
+  it("throws NOT_FOUND when the caller does not own the target quest", async () => {
+    await insertUser(db, "user-wt11");
+    await insertUser(db, "user-wt11b");
+    const quest = await insertQuest(db, "user-wt11"); // owned by user-wt11
+
+    await expect(
+      createObjectiveAndAddToTodayFn(db, "user-wt11b", {
+        questId: quest.id,
+        name: "Stolen Task",
+        intendedDuration: 30,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("throws for empty name", async () => {
+    await insertUser(db, "user-wt12");
+    const quest = await insertQuest(db, "user-wt12");
+
+    await expect(
+      createObjectiveAndAddToTodayFn(db, "user-wt12", {
+        questId: quest.id,
+        name: "",
+        intendedDuration: 30,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("throws for zero or negative duration", async () => {
+    await insertUser(db, "user-wt13");
+    const quest = await insertQuest(db, "user-wt13");
+
+    await expect(
+      createObjectiveAndAddToTodayFn(db, "user-wt13", {
+        questId: quest.id,
+        name: "Task",
+        intendedDuration: 0,
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      createObjectiveAndAddToTodayFn(db, "user-wt13", {
+        questId: quest.id,
+        name: "Task",
+        intendedDuration: -5,
+      }),
+    ).rejects.toThrow();
   });
 });
