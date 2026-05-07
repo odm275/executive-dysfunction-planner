@@ -21,6 +21,10 @@ type ActiveSession = {
   endedAt: Date | null;
 };
 
+type Props = {
+  onOpenAddObjective: () => void;
+};
+
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
@@ -66,7 +70,7 @@ function FrozenTimer({ accumulatedMinutes }: { accumulatedMinutes: number }) {
   );
 }
 
-export function CurrentFocusHero() {
+export function CurrentFocusHero({ onOpenAddObjective }: Props) {
   const utils = api.useUtils();
 
   const { data: schedule, isLoading: scheduleLoading } =
@@ -107,13 +111,11 @@ export function CurrentFocusHero() {
 
   if (!currentItem) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <p className="text-lg font-semibold text-muted-foreground">
           No objectives scheduled
         </p>
-        <p className="text-sm text-muted-foreground">
-          Add objectives to get started
-        </p>
+        <Button onClick={onOpenAddObjective}>+ Add objective</Button>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
 type ScheduleItem = {
@@ -8,6 +9,10 @@ type ScheduleItem = {
   questName: string;
   intendedDuration: number;
   scheduledStart?: Date;
+};
+
+type Props = {
+  onOpenAddObjective: () => void;
 };
 
 function formatTime(date: Date): string {
@@ -26,7 +31,7 @@ function formatDuration(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-export function MiniTimeline() {
+export function MiniTimeline({ onOpenAddObjective }: Props) {
   const utils = api.useUtils();
   const { data: schedule, isLoading } =
     api.warTable.getTodaySchedule.useQuery();
@@ -43,10 +48,11 @@ export function MiniTimeline() {
 
   if (items.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <p className="text-sm text-muted-foreground">
-          Add objectives to get started
+          No schedule yet
         </p>
+        <Button onClick={onOpenAddObjective}>+ Add objective</Button>
       </div>
     );
   }

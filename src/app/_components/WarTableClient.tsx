@@ -58,7 +58,7 @@ export function WarTableClient() {
           className="flex flex-1 overflow-hidden rounded-lg border border-border bg-card"
           aria-label="Current Focus Hero"
         >
-          <CurrentFocusHero />
+          <CurrentFocusHero onOpenAddObjective={openAddObjective} />
         </section>
 
         {/* Bottom zone — Mini Timeline + Queue Manager */}
@@ -69,7 +69,7 @@ export function WarTableClient() {
           <div className="flex flex-1 overflow-hidden">
             {/* Left: Mini Timeline */}
             <div className="flex-1 overflow-hidden border-r border-border">
-              <MiniTimeline />
+              <MiniTimeline onOpenAddObjective={openAddObjective} />
             </div>
             {/* Right: Queue controls */}
             <div className="w-72 shrink-0 overflow-y-auto p-4">
