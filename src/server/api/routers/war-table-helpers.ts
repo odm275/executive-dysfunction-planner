@@ -4,11 +4,11 @@
  * These are extracted from the router so they can be tested in isolation
  * with an in-memory database without importing the tRPC / better-auth stack.
  */
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "~/server/db/schema";
-import { dailyScheduleItem } from "~/server/db/schema";
+import { dailyScheduleItem, workSession } from "~/server/db/schema";
 import { scheduleItems } from "~/server/war-table-scheduler";
 import type { EnergyLevel } from "~/server/war-table-scheduler";
 
@@ -118,4 +118,49 @@ export async function reorderQueueFn(
         ),
     ),
   );
+}
+
+/**
+ * Return a map of scheduleItemId → total accumulated work (minutes) for the given
+ * items on a specific date.
+ *
+ * Only completed sessions (endedAt IS NOT NULL) are counted.
+ * Items with no completed sessions return 0.
+ */
+export async function getAccumulatedDurationsFn(
+  db: Db,
+  userId: string,
+  scheduleItemIds: number[],
+  date: string,
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+
+  // Pre-fill all ids with 0 so items with no sessions still appear.
+  for (const id of scheduleItemIds) {
+    result.set(id, 0);
+  }
+
+  if (scheduleItemIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      scheduleItemId: workSession.scheduleItemId,
+      total: sum(workSession.actualDuration),
+    })
+    .from(workSession)
+    .where(
+      and(
+        eq(workSession.userId, userId),
+        eq(workSession.date, date),
+        inArray(workSession.scheduleItemId, scheduleItemIds),
+        isNotNull(workSession.endedAt),
+      ),
+    )
+    .groupBy(workSession.scheduleItemId);
+
+  for (const row of rows) {
+    result.set(row.scheduleItemId, Number(row.total ?? 0));
+  }
+
+  return result;
 }

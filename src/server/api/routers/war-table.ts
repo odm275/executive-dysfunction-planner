@@ -7,6 +7,7 @@ import {
   removeFromTodayFn,
   getTodayScheduleFn,
   reorderQueueFn,
+  getAccumulatedDurationsFn,
 } from "~/server/api/routers/war-table-helpers";
 import {
   getWeeklyTemplateFn,
@@ -102,9 +103,19 @@ export const warTableRouter = createTRPCRouter({
       scheduled.map((s) => [s.id, s.scheduledStart]),
     );
 
+    // Compute accumulated duration per item from completed work sessions
+    const itemIds = rawItems.map((item) => item.id);
+    const accumulatedMap = await getAccumulatedDurationsFn(
+      ctx.db,
+      userId,
+      itemIds,
+      date,
+    );
+
     return rawItems.map((item) => ({
       ...item,
       scheduledStart: scheduledMap.get(item.id),
+      accumulatedDuration: accumulatedMap.get(item.id) ?? 0,
     }));
   }),
 

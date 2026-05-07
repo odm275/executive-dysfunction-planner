@@ -11,6 +11,7 @@ type ScheduleItem = {
   questName: string;
   intendedDuration: number;
   scheduledStart?: Date;
+  accumulatedDuration: number;
 };
 
 type ActiveSession = {
@@ -31,11 +32,13 @@ function formatElapsed(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  if (h > 0)
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function Timer({ startedAt }: { startedAt: Date }) {
+/** Live timer counting up from a start time. */
+function LiveTimer({ startedAt }: { startedAt: Date }) {
   const [elapsed, setElapsed] = useState(
     Math.floor((Date.now() - startedAt.getTime()) / 1000),
   );
@@ -54,18 +57,32 @@ function Timer({ startedAt }: { startedAt: Date }) {
   );
 }
 
+/** Frozen display showing already-accumulated minutes. */
+function FrozenTimer({ accumulatedMinutes }: { accumulatedMinutes: number }) {
+  return (
+    <span className="font-mono text-2xl font-bold tabular-nums text-muted-foreground">
+      {formatElapsed(accumulatedMinutes * 60)}
+    </span>
+  );
+}
+
 export function CurrentFocusHero() {
   const utils = api.useUtils();
 
   const { data: schedule, isLoading: scheduleLoading } =
     api.warTable.getTodaySchedule.useQuery();
-  const { data: activeSession } =
-    api.workSession.getActiveSession.useQuery();
+  const { data: activeSession } = api.workSession.getActiveSession.useQuery();
 
   const startSession = api.workSession.startSession.useMutation({
     onSuccess: () => utils.workSession.getActiveSession.invalidate(),
   });
   const pauseSession = api.workSession.pauseSession.useMutation({
+    onSuccess: () => {
+      void utils.workSession.getActiveSession.invalidate();
+      void utils.warTable.getTodaySchedule.invalidate();
+    },
+  });
+  const resumeSession = api.workSession.resumeSession.useMutation({
     onSuccess: () => utils.workSession.getActiveSession.invalidate(),
   });
   const completeSession = api.workSession.completeSession.useMutation({
@@ -102,8 +119,21 @@ export function CurrentFocusHero() {
   }
 
   const session = activeSession as ActiveSession | null | undefined;
-  const isCurrentItemActive =
+
+  // Derive item state:
+  //   In Progress — active session matches this item
+  //   Paused      — accumulated work but no active session
+  //   Queued      — no work yet and no active session
+  const isInProgress =
     session != null && session.scheduleItemId === currentItem.id;
+  const isPaused =
+    !isInProgress &&
+    session == null &&
+    (currentItem.accumulatedDuration ?? 0) > 0;
+  // isQueued = !isInProgress && !isPaused
+
+  const anotherSessionActive =
+    session != null && session.scheduleItemId !== currentItem.id;
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -125,17 +155,26 @@ export function CurrentFocusHero() {
             {formatDuration(currentItem.intendedDuration)}
           </p>
         </div>
-        {isCurrentItemActive && (
+        {isInProgress && (
           <div className="space-y-0.5">
             <p className="text-xs text-muted-foreground">Elapsed</p>
-            <Timer startedAt={new Date(session.startedAt)} />
+            <LiveTimer startedAt={new Date(session.startedAt)} />
+          </div>
+        )}
+        {isPaused && (
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground">Accumulated</p>
+            <FrozenTimer
+              accumulatedMinutes={currentItem.accumulatedDuration ?? 0}
+            />
           </div>
         )}
       </div>
 
       {/* Controls */}
       <div className="flex gap-2">
-        {!isCurrentItemActive && (
+        {/* Queued — Start */}
+        {!isInProgress && !isPaused && (
           <Button
             onClick={() =>
               startSession.mutate({
@@ -143,15 +182,14 @@ export function CurrentFocusHero() {
                 objectiveId: currentItem.objectiveId,
               })
             }
-            disabled={
-              startSession.isPending ||
-              (session != null && !isCurrentItemActive)
-            }
+            disabled={startSession.isPending || anotherSessionActive}
           >
             ▶ Start
           </Button>
         )}
-        {isCurrentItemActive && (
+
+        {/* In Progress — Pause + Done */}
+        {isInProgress && (
           <>
             <Button
               variant="outline"
@@ -168,9 +206,26 @@ export function CurrentFocusHero() {
             </Button>
           </>
         )}
+
+        {/* Paused — Resume + Done (needs a fresh session to complete) */}
+        {isPaused && (
+          <>
+            <Button
+              onClick={() =>
+                resumeSession.mutate({
+                  scheduleItemId: currentItem.id,
+                  objectiveId: currentItem.objectiveId,
+                })
+              }
+              disabled={resumeSession.isPending}
+            >
+              ▶ Resume
+            </Button>
+          </>
+        )}
       </div>
 
-      {session != null && !isCurrentItemActive && (
+      {anotherSessionActive && (
         <p className="text-xs text-muted-foreground">
           Another session is active. Complete it before starting a new one.
         </p>

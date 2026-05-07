@@ -54,17 +54,15 @@ export async function startSessionFn(
 }
 
 /**
- * Pause a work session. The session remains active (endedAt stays null).
- * This is a no-op beyond recording intent; the session still appears in getActiveSession.
+ * Pause a work session: sets endedAt and computes actualDuration.
+ * After this call the session is ended and getActiveSession returns null,
+ * releasing the one-session constraint so the user can start a different item.
  */
 export async function pauseSessionFn(
   db: Db,
   userId: string,
   sessionId: number,
 ) {
-  // Pausing does not end the session — it remains active so the user can resume.
-  // The paused state is implicit (no endedAt set). We just verify the session exists
-  // and belongs to this user.
   const existing = await db.query.workSession.findFirst({
     where: and(
       eq(workSession.id, sessionId),
@@ -80,7 +78,32 @@ export async function pauseSessionFn(
     });
   }
 
-  return existing;
+  const endedAt = new Date();
+  const actualDuration = Math.round(
+    (endedAt.getTime() - existing.startedAt.getTime()) / 60_000,
+  );
+
+  const [updated] = await db
+    .update(workSession)
+    .set({ endedAt, actualDuration })
+    .where(eq(workSession.id, sessionId))
+    .returning();
+
+  return updated!;
+}
+
+/**
+ * Resume a paused schedule item by starting a fresh work session.
+ * Behaves like startSession but is named distinctly for clarity.
+ * Enforces the one-active-session-at-a-time constraint.
+ */
+export async function resumeSessionFn(
+  db: Db,
+  userId: string,
+  scheduleItemId: number,
+  objectiveId: number,
+) {
+  return startSessionFn(db, userId, scheduleItemId, objectiveId);
 }
 
 /**

@@ -4,6 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   startSessionFn,
   pauseSessionFn,
+  resumeSessionFn,
   completeSessionFn,
   getActiveSessionFn,
 } from "~/server/api/routers/work-session-helpers";
@@ -36,6 +37,26 @@ export const workSessionRouter = createTRPCRouter({
     .input(z.object({ sessionId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       return pauseSessionFn(ctx.db, ctx.session.user.id, input.sessionId);
+    }),
+
+  /**
+   * Resume a paused schedule item by starting a new work session.
+   * Behaves like startSession but is named distinctly for clarity.
+   */
+  resumeSession: protectedProcedure
+    .input(
+      z.object({
+        scheduleItemId: z.number().int().positive(),
+        objectiveId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return resumeSessionFn(
+        ctx.db,
+        ctx.session.user.id,
+        input.scheduleItemId,
+        input.objectiveId,
+      );
     }),
 
   /**

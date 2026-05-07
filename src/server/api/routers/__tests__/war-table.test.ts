@@ -15,6 +15,7 @@ import {
   removeFromTodayFn,
   getTodayScheduleFn,
   reorderQueueFn,
+  getAccumulatedDurationsFn,
 } from "../war-table-helpers";
 
 // ---------------------------------------------------------------------------
@@ -169,6 +170,109 @@ describe("Behavior 4: getTodaySchedule returns items with scheduledStart", () =>
     const schedule = await getTodayScheduleFn(db, "user-wt5", new Date(), []);
     expect(schedule).toHaveLength(1);
     expect(schedule[0]!.scheduledStart).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Behavior 6 — getAccumulatedDurations sums completed session durations per item
+// ---------------------------------------------------------------------------
+describe("Behavior 6: getAccumulatedDurations returns sum of completed session durations", () => {
+  let db: TestDb;
+
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
+  it("returns 0 for an item with no sessions", async () => {
+    await insertUser(db, "user-wt7");
+    const quest = await insertQuest(db, "user-wt7");
+    const obj = await insertObjective(db, quest.id);
+    const item = await addToTodayFn(db, "user-wt7", obj.id, 60);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const durations = await getAccumulatedDurationsFn(
+      db,
+      "user-wt7",
+      [item.id],
+      today,
+    );
+    expect(durations.get(item.id)).toBe(0);
+  });
+
+  it("sums actualDuration across multiple completed sessions for the same item", async () => {
+    await insertUser(db, "user-wt8");
+    const quest = await insertQuest(db, "user-wt8");
+    const obj = await insertObjective(db, quest.id);
+    const item = await addToTodayFn(db, "user-wt8", obj.id, 60);
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Insert two completed sessions with known actualDuration values
+    await db.insert(schema.workSession).values([
+      {
+        userId: "user-wt8",
+        objectiveId: obj.id,
+        scheduleItemId: item.id,
+        date: today,
+        startedAt: new Date(),
+        endedAt: new Date(),
+        actualDuration: 20,
+      },
+      {
+        userId: "user-wt8",
+        objectiveId: obj.id,
+        scheduleItemId: item.id,
+        date: today,
+        startedAt: new Date(),
+        endedAt: new Date(),
+        actualDuration: 15,
+      },
+    ]);
+
+    const durations = await getAccumulatedDurationsFn(
+      db,
+      "user-wt8",
+      [item.id],
+      today,
+    );
+    expect(durations.get(item.id)).toBe(35);
+  });
+
+  it("ignores sessions without an endedAt (still active)", async () => {
+    await insertUser(db, "user-wt9");
+    const quest = await insertQuest(db, "user-wt9");
+    const obj = await insertObjective(db, quest.id);
+    const item = await addToTodayFn(db, "user-wt9", obj.id, 60);
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Insert one completed and one still-active session
+    await db.insert(schema.workSession).values([
+      {
+        userId: "user-wt9",
+        objectiveId: obj.id,
+        scheduleItemId: item.id,
+        date: today,
+        startedAt: new Date(),
+        endedAt: new Date(),
+        actualDuration: 10,
+      },
+      {
+        userId: "user-wt9",
+        objectiveId: obj.id,
+        scheduleItemId: item.id,
+        date: today,
+        startedAt: new Date(),
+        // no endedAt — still active
+      },
+    ]);
+
+    const durations = await getAccumulatedDurationsFn(
+      db,
+      "user-wt9",
+      [item.id],
+      today,
+    );
+    // Only the completed session's 10 minutes count
+    expect(durations.get(item.id)).toBe(10);
   });
 });
 
