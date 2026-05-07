@@ -9,15 +9,24 @@ import { AvailabilitySettings } from "~/app/_components/AvailabilitySettings";
 import { CurrentFocusHero } from "~/app/_components/CurrentFocusHero";
 import { MiniTimeline } from "~/app/_components/MiniTimeline";
 import { QueueManager } from "~/app/_components/QueueManager";
+import { AddObjectiveDialog } from "~/app/_components/AddObjectiveDialog";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { api } from "~/trpc/react";
 
 export function WarTableClient() {
   const [showAvailability, setShowAvailability] = useState(false);
+  const [addObjectiveOpen, setAddObjectiveOpen] = useState(false);
+
+  const { data: schedule } = api.warTable.getTodaySchedule.useQuery();
+
+  function openAddObjective() {
+    setAddObjectiveOpen(true);
+  }
 
   return (
     <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -64,11 +73,18 @@ export function WarTableClient() {
             </div>
             {/* Right: Queue controls */}
             <div className="w-72 shrink-0 overflow-y-auto p-4">
-              <QueueManager />
+              <QueueManager onOpenAddObjective={openAddObjective} />
             </div>
           </div>
         </section>
       </div>
+
+      {/* Shared Add Objective modal — rendered once, opened from multiple places */}
+      <AddObjectiveDialog
+        open={addObjectiveOpen}
+        onOpenChange={setAddObjectiveOpen}
+        schedule={schedule ?? []}
+      />
 
       {/* Availability settings sheet */}
       <Sheet open={showAvailability} onOpenChange={setShowAvailability}>

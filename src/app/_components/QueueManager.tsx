@@ -4,13 +4,6 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
-const DURATION_OPTIONS = [
-  { label: "30m", value: 30 },
-  { label: "1h", value: 60 },
-  { label: "1.5h", value: 90 },
-  { label: "2h", value: 120 },
-] as const;
-
 type ScheduleItem = {
   id: number;
   objectiveId: number;
@@ -21,12 +14,6 @@ type ScheduleItem = {
   scheduledStart?: Date;
 };
 
-type ActiveObjective = {
-  id: number;
-  name: string;
-  questName: string;
-};
-
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
@@ -34,117 +21,14 @@ function formatDuration(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-// ---------------------------------------------------------------------------
-// Add objectives browse + duration picker flow
-// ---------------------------------------------------------------------------
-function AddObjectivesPanel({
-  schedule,
-  onClose,
-}: {
-  schedule: ScheduleItem[];
-  onClose: () => void;
-}) {
-  const utils = api.useUtils();
-  const { data: quests, isLoading } = api.quest.listActiveQuests.useQuery();
-  const addToToday = api.warTable.addToToday.useMutation({
-    onSuccess: () => {
-      void utils.warTable.getTodaySchedule.invalidate();
-    },
-  });
-
-  const [selectedObjectiveId, setSelectedObjectiveId] = useState<
-    number | null
-  >(null);
-
-  const scheduledObjectiveIds = new Set(schedule.map((s) => s.objectiveId));
-
-  const allObjectives: ActiveObjective[] = (quests ?? []).flatMap((q) =>
-    q.objectives
-      .filter((o) => !o.isCompleted)
-      .map((o) => ({
-        id: o.id,
-        name: o.name,
-        questName: q.name,
-      })),
-  );
-
-  if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
-  }
-
-  return (
-    <div className="space-y-3">
-      <h3 className="font-semibold text-sm">Add objective to today</h3>
-      {selectedObjectiveId === null ? (
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {allObjectives.length === 0 && (
-            <p className="text-sm text-muted-foreground">No active objectives</p>
-          )}
-          {allObjectives.map((obj) => {
-            const alreadyQueued = scheduledObjectiveIds.has(obj.id);
-            return (
-              <button
-                key={obj.id}
-                disabled={alreadyQueued}
-                onClick={() => setSelectedObjectiveId(obj.id)}
-                className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                  alreadyQueued
-                    ? "cursor-not-allowed opacity-50 bg-muted"
-                    : "hover:bg-muted bg-muted/30"
-                }`}
-              >
-                <p className="font-medium">{obj.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {obj.questName}
-                  {alreadyQueued ? " · Already queued" : ""}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            How long do you intend to spend?
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {DURATION_OPTIONS.map(({ label, value }) => (
-              <Button
-                key={value}
-                variant="outline"
-                size="sm"
-                disabled={addToToday.isPending}
-                onClick={() =>
-                  addToToday.mutate({
-                    objectiveId: selectedObjectiveId,
-                    intendedDuration: value,
-                  })
-                }
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedObjectiveId(null)}
-          >
-            ← Back
-          </Button>
-        </div>
-      )}
-      <Button variant="ghost" size="sm" onClick={onClose}>
-        Close
-      </Button>
-    </div>
-  );
-}
+type Props = {
+  onOpenAddObjective: () => void;
+};
 
 // ---------------------------------------------------------------------------
 // QueueManager — the full queue controls panel
 // ---------------------------------------------------------------------------
-export function QueueManager() {
+export function QueueManager({ onOpenAddObjective }: Props) {
   const utils = api.useUtils();
 
   const { data: schedule } = api.warTable.getTodaySchedule.useQuery();
@@ -157,8 +41,6 @@ export function QueueManager() {
   const reorderQueue = api.warTable.reorderQueue.useMutation({
     onSuccess: () => void utils.warTable.getTodaySchedule.invalidate(),
   });
-
-  const [showAdd, setShowAdd] = useState(false);
 
   function moveItem(index: number, direction: -1 | 1) {
     const newOrder = [...items];
@@ -178,27 +60,13 @@ export function QueueManager() {
     <div className="space-y-3 text-sm">
       {/* Actions toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAdd((prev) => !prev)}
-        >
+        <Button variant="outline" size="sm" onClick={onOpenAddObjective}>
           + Add objective
         </Button>
         <Button variant="outline" size="sm" onClick={handleReschedule}>
           🔄 Reschedule from now
         </Button>
       </div>
-
-      {/* Add objectives panel */}
-      {showAdd && (
-        <div className="rounded-lg border border-border bg-muted/20 p-3">
-          <AddObjectivesPanel
-            schedule={items}
-            onClose={() => setShowAdd(false)}
-          />
-        </div>
-      )}
 
       {/* Queue list with controls */}
       {items.length === 0 ? (
