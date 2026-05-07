@@ -11,7 +11,12 @@ type ScheduleItem = {
 };
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    hourCycle: "h12",
+  });
 }
 
 function formatDuration(minutes: number): string {

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
+import { formatHHMM } from "~/lib/time-format";
+
 const DAYS = [
   "Sunday",
   "Monday",
@@ -106,7 +108,7 @@ export function AvailabilitySettings() {
               <span className="flex-1 text-xs text-muted-foreground">
                 {wins.length === 0
                   ? "No windows"
-                  : wins.map((w) => `${w.startTime}–${w.endTime}`).join(", ")}
+                  : wins.map((w) => `${formatHHMM(w.startTime)}–${formatHHMM(w.endTime)}`).join(", ")}
               </span>
               <Button variant="outline" size="xs" onClick={() => startEditDay(day)}>
                 Edit
